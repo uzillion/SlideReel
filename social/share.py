@@ -72,6 +72,7 @@ class Twitter:
         # Stores Access Tokens in respective variables
         self.OAUTH_TOKEN = tokens['oauth_token']
         self.OAUTH_TOKEN_SECRET = tokens['oauth_token_secret']
+        self.SCREEN_NAME = tokens['screen_name']
         self.user_init()
 
     # Creates twitter app user
@@ -83,6 +84,8 @@ class Twitter:
         photo = open(img, 'rb')
         response = self.twitter.upload_media(media=photo)
         self.twitter.update_status(media_ids=[response['media_id']])
+        webbrowser.open_new("http://localhost:3000/twitter?status=completed&name="+self.SCREEN_NAME)
+
 
     def postVideo(self, video):
         self.video = video
@@ -112,7 +115,7 @@ class Twitter:
 
         req = requests.post(url=self.MEDIA_UPLOAD_URL, data=data, auth=self.oauth)
         self.media_id = req.json()['media_id']
-        print('Media ID: %s' % str(self.media_id))
+        # print('Media ID: %s' % str(self.media_id))
 
     def videoAppend(self):
         segment_id = 0
@@ -121,7 +124,7 @@ class Twitter:
 
         while bytes_sent < self.video_size:
             chunk = file.read(4*1024*1024)
-            print('APPEND')
+            print('Sending segment {}'.format(segment_id+1))
 
             data = {
                 'command': 'APPEND',
@@ -156,7 +159,7 @@ class Twitter:
         }
 
         req = requests.post(url=self.MEDIA_UPLOAD_URL, data=data, auth=self.oauth)
-        print(req.json())
+        # print(req.json())
 
         self.processing_info = req.json().get('processing_info', None)
         self.check_status()
@@ -170,10 +173,12 @@ class Twitter:
         print('Media processing status is %s ' % state)
 
         if state == u'succeeded':
-          return
+            webbrowser.open_new("http://localhost:3000/twitter?status=completed&name="+self.SCREEN_NAME)
+            return
 
         if state == u'failed':
-          sys.exit(0)
+            print("Upload Failed")
+            sys.exit(0)
 
         check_after_secs = self.processing_info['check_after_secs']
 

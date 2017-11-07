@@ -6,17 +6,26 @@ var express = require("express"),
 var app = express();
 app.set("view engine", "ejs");
 // app.use(express.static(path.join(__dirname, 'scripts')));
-app.set("views", "./scripts");
+app.set("views", __dirname + "/scripts");
 app.use(bP.urlencoded({extended: true}));
 
 app.get("/twitter", function(req, res) {
     var obj = {oauth_verifier: req.query.oauth_verifier};
-    fs.writeFile('oauth_cred.json', JSON.stringify(obj), 'utf8', function(err) {
+    var status = req.query.status;
+    var screen_name = req.query.name;
+    fs.writeFile(__dirname + '/oauth_cred.json', JSON.stringify(obj), 'utf8', function(err) {
         if(err) {
             console.log(err);
         }
     });
-    res.render("close")
+    if(status == "completed") {
+        function redirect() {
+            res.redirect("https://twitter.com/"+screen_name);
+        }
+        setTimeout(redirect, 3000);
+    } else {
+        res.render("pending.ejs");
+    }
 });
 
 app.get("/facebook", function(req, res) {
