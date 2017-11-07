@@ -201,8 +201,8 @@ class Twitter:
 # ============================ Facebook ===============================
 class Facebook:
     def __init__(self):
-        self.__ACCESS_TOKEN = ""
-        self.__USER_ID = ""
+        self.ACCESS_TOKEN = ""
+        self.USER_ID = ""
 
 
     def authorize(self):
@@ -213,7 +213,7 @@ class Facebook:
         # Makes program wait till OAuth credentials are ready to be read
         while True:
             try:
-                open('oauth_cred.json', 'r')
+                open('./social/oauth_cred.json', 'r')
                 break;
             except:
                 pass
@@ -222,21 +222,23 @@ class Facebook:
         time.sleep(1)
 
         # Loads OAuth data from JSON file
-        f=open('./social/oauth_cred.json', 'rb')
+        f=open('./social/oauth_cred.json', 'r')
         obj = json.load(f)
         f.close()
         # Removing to prevent future access
         os.remove('./social/oauth_cred.json')
 
         # Stores Access Tokens in respective variables
-        self.__ACCESS_TOKEN = obj['ACCESS_TOKEN']
-        self.__USER_ID = obj['USER_ID']
-        self.graph = facebook.GraphAPI(access_token=self.__ACCESS_TOKEN, version="2.1")
+        self.ACCESS_TOKEN = obj['ACCESS_TOKEN']
+        self.USER_ID = obj['USER_ID']
+        self.graph = facebook.GraphAPI(access_token=self.ACCESS_TOKEN, version="2.1")
 
     def postImage(self, img):
-        self.graph.put_photo(image=open(img, 'rb'),
-                album_path=self.__USER_ID + "/photos")
+        self.graph.put_photo(image=open(img, 'rb'), album_path=self.USER_ID + "/photos")
+        time.sleep(2)
+        webbrowser.open_new("http://localhost:3000/facebook?status=completed&user="+self.USER_ID)
+
 
     def postVideo(self, video):
         self.graph.put_video(video=open(video, 'rb'),
-                album_path=self.__USER_ID + "/videos")
+                album_path=self.USER_ID + "/videos")

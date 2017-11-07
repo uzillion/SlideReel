@@ -29,7 +29,12 @@ app.get("/twitter", function(req, res) {
 });
 
 app.get("/facebook", function(req, res) {
-    res.render("fb");
+    console.log(req.query.status)
+    if(req.query.status == "completed"){
+        res.redirect("https://facebook.com/"+req.query.user);
+    } else {
+        res.render("fb");
+    }
 });
 
 app.post("/facebook", function(req, res) {
@@ -39,7 +44,7 @@ app.post("/facebook", function(req, res) {
             console.log(err);
         }
     });
-    res.render("close");
+    // res.render("pending");
 });
 
 app.listen(3000, process.env.IP, function() {
