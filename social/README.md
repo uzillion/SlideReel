@@ -13,4 +13,4 @@
    facebook.authorize()
    ```
 6. Use "&lt;social media instance&gt;.postImage(&lt;image path&gt;)" to post images<br><br>
-7. Use "&lt;social media instance&gt;.postImage(&lt;video path&gt;)" to post videos
+7. Use "&lt;social media instance&gt;.postVideo(&lt;video path&gt;)" to post videos
