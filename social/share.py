@@ -302,4 +302,10 @@ class Facebook:
         req = requests.post(url=self.MEDIA_UPLOAD_URL, data=data)
         print("success:{}".format(req.json()['success']))
         if req.json()['success'] == True:
+            print("Processing....")
+            for remaining in range(40, 0, -1):
+                sys.stdout.write("\r")
+                sys.stdout.write("{:2d}".format(remaining))
+                sys.stdout.flush()
+                time.sleep(1)
             webbrowser.open_new("http://localhost:3000/facebook?status=completed&user="+self.USER_ID)
