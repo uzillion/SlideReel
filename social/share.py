@@ -240,5 +240,66 @@ class Facebook:
 
 
     def postVideo(self, video):
-        self.graph.put_video(video=open(video, 'rb'),
-                album_path=self.USER_ID + "/videos")
+        self.video = video
+        self.video_size = os.path.getsize(video)
+        self.MEDIA_UPLOAD_URL = "https://graph-video.facebook.com/v2.3/" + self.USER_ID + "/videos"
+        self.videoInit()
+        self.videoAppend()
+        self.videoFinalize()
+
+    def videoInit(self):
+        data = {
+            'access_token': self.ACCESS_TOKEN,
+            'upload_phase': 'start',
+            'file_size': self.video_size
+        }
+
+        req = requests.post(url=self.MEDIA_UPLOAD_URL, data=data)
+        obj = req.json()
+        print(obj)
+        self.session_id = obj['upload_session_id']
+        self.video_id = obj['video_id']
+        self.start_offset = obj['start_offset']
+        self.end_offset = obj['end_offset']
+
+    def videoAppend(self):
+        file = open(self.video, 'rb')
+        segment_id = 0
+
+        while self.start_offset != self.end_offset:
+            read_bytes = int(self.end_offset) - int(self.start_offset)
+            chunk = file.read(read_bytes)
+            data = {
+                'access_token': self.ACCESS_TOKEN,
+                'upload_phase': 'transfer',
+                'start_offset': self.start_offset,
+                'upload_session_id': self.session_id
+            }
+
+            files = {
+                'video_file_chunk': chunk
+            }
+
+            req = requests.post(url=self.MEDIA_UPLOAD_URL, data=data, files=files)
+            obj = req.json()
+            self.start_offset = obj['start_offset']
+            self.end_offset = obj['end_offset']
+
+            segment_id = segment_id + 1
+            bytes_sent = file.tell()
+
+            print('{} of {} bytes uploaded'.format(str(bytes_sent), str(self.video_size)))
+
+        print("Upload complete")
+
+    def videoFinalize(self):
+        data = {
+            'access_token': self.ACCESS_TOKEN,
+            'upload_phase':'finish',
+            'upload_session_id': self.session_id
+        }
+
+        req = requests.post(url=self.MEDIA_UPLOAD_URL, data=data)
+        print("success:{}".format(req.json()['success']))
+        if req.json()['success'] == True:
+            webbrowser.open_new("http://localhost:3000/facebook?status=completed&user="+self.USER_ID)

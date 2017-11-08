@@ -39,7 +39,7 @@ app.get("/facebook", function(req, res) {
 
 app.post("/facebook", function(req, res) {
     // console.log(req.body);
-    fs.writeFile('oauth_cred.json', JSON.stringify(req.body), 'utf8', function(err) {
+    fs.writeFile(__dirname + '/oauth_cred.json', JSON.stringify(req.body), 'utf8', function(err) {
         if(err) {
             console.log(err);
         }

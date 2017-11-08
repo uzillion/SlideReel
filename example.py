@@ -7,5 +7,5 @@ from social.share import *
 
 facebook = Facebook()
 facebook.authorize()
-facebook.postImage("./sample_image.jpg")
-facebook.postVideo("./sample_video.jpg")
+# facebook.postImage("./sample_image.jpg")
+facebook.postVideo("./sample_video.mp4")
