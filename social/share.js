@@ -29,7 +29,7 @@ app.get("/twitter", function(req, res) {
 });
 
 app.get("/facebook", function(req, res) {
-    console.log(req.query.status)
+    // console.log(req.query.status)
     if(req.query.status == "completed"){
         res.redirect("https://facebook.com/"+req.query.user);
     } else {
