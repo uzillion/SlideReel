@@ -17,11 +17,12 @@ graphical user interface of the application. It is invoked by main.py.
 """
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, QWidget, QPushButton, QLineEdit, QMessageBox, QSlider, QStyle
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, QWidget, QPushButton, QLineEdit, QMessageBox, QInputDialog
+from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtCore import Qt
 import os, sys, time
 from programModel import *
+from PIL import ImageFilter, Image, ImageEnhance
 
 class Ui_MainWindow(QWidget):
 
@@ -31,6 +32,11 @@ class Ui_MainWindow(QWidget):
         self.duration = 0
 
     def setupUi(self, MainWindow):
+
+        # initiate self pixmap
+        self.pixmap =QPixmap()
+#        self.img = self.pixmap.toImage()
+
         MainWindow.setObjectName("MainWindow")
         #Window Size
         MainWindow.resize(1024, 768)
@@ -80,8 +86,10 @@ class Ui_MainWindow(QWidget):
         self.actionSelect_All.setObjectName("actionSelect_All")
         self.actionPreferences = QtWidgets.QAction(MainWindow)
         self.actionPreferences.setObjectName("actionPreferences")
-        self.actionBrightness_Contrast = QtWidgets.QAction(MainWindow)
-        self.actionBrightness_Contrast.setObjectName("actionBrightness_Contrast")
+        self.actionBrightness = QtWidgets.QAction(MainWindow)
+        self.actionBrightness.setObjectName("actionBrightness")
+        self.actionContrast = QtWidgets.QAction(MainWindow)
+        self.actionContrast.setObjectName("actionContrast")
         self.actionExposure = QtWidgets.QAction(MainWindow)
         self.actionExposure.setObjectName("actionExposure")
         self.actionVibrance = QtWidgets.QAction(MainWindow)
@@ -122,8 +130,8 @@ class Ui_MainWindow(QWidget):
         self.menuEdit.addAction(self.actionSelect_All)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionPreferences)
-
-        self.menuImage.addAction(self.actionBrightness_Contrast)
+        self.menuImage.addAction(self.actionBrightness)
+        self.menuImage.addAction(self.actionContrast)
         self.menuImage.addAction(self.actionExposure)
         self.menuImage.addSeparator()
         self.menuImage.addAction(self.actionVibrance)
@@ -233,7 +241,8 @@ class Ui_MainWindow(QWidget):
         self.actionPaste.setText(_translate("MainWindow", "Paste"))
         self.actionSelect_All.setText(_translate("MainWindow", "Select All"))
         self.actionPreferences.setText(_translate("MainWindow", "Preferences..."))
-        self.actionBrightness_Contrast.setText(_translate("MainWindow", "Brightness/Contrast..."))
+        self.actionBrightness.setText(_translate("MainWindow", "Brightness..."))
+        self.actionContrast.setText(_translate("MainWindow", "Contrast..."))
         self.actionExposure.setText(_translate("MainWindow", "Exposure..."))
         self.actionVibrance.setText(_translate("MainWindow", "Vibrance..."))
         self.actionHue_Saturation.setText(_translate("MainWindow", "Hue/Saturation..."))
@@ -253,6 +262,12 @@ class Ui_MainWindow(QWidget):
         # Action for File->Quit
         self.actionQuit.triggered.connect(self.quitProgram)
         self.playButton.clicked.connect(self.play)
+        self.actionBrightness.triggered.connect(self.change_brightness)         # Action for brightness
+        self.actionContrast.triggered.connect(self.change_contrast)             # Action for contrast
+        self.actionHue_Saturation.triggered.connect(self.change_saturation)     # Action for saturation
+        self.actionBlack_White.triggered.connect(self.blackwhite)               # Action for black and white
+        self.actionBlur.triggered.connect(self.blur)                            # Action to blur the image
+        self.actionSharpen.triggered.connect(self.sharpen)                      # Action to sharpen the image
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
@@ -288,9 +303,9 @@ class Ui_MainWindow(QWidget):
     def treeFileClicked(self, signal):
         self.filePath=self.treeView.model().filePath(signal)
         try:
-            pixmap = QPixmap(self.filePath)
-            pixmap = self.scaleImage(pixmap)
-            self.imageBoard.setPixmap(pixmap)
+            self.pixmap = QPixmap(self.filePath)
+            self.pixmap = self.scaleImage(self.pixmap)
+            self.imageBoard.setPixmap(self.pixmap)
             self.imageBoard.setAlignment(Qt.AlignCenter)
         except:
             print('Not an image file! Please try another file.')
@@ -378,3 +393,127 @@ class Ui_MainWindow(QWidget):
         if choice == QMessageBox.Yes:
             print('Application closed successfully.')
             sys.exit()
+
+    # adjust brightness UI dialog
+    def change_brightness(self):
+        text, ok = QInputDialog.getText(self, 'Text Input Dialog', 'Enter brightness value (-255 ~ 255):')
+        if ok:
+            self.change_brightness_core(float(text))
+
+    # adjust brightness core function
+    def change_brightness_core(self, level):
+        self.img = self.pixmap.toImage()
+        for x in range(self.img.width()):
+            for y in range(self.img.height()):
+                color = QColor(self.img.pixel(x, y))
+                r = self.truncate(color.red() + level)
+                g = self.truncate(color.green() + level)
+                b = self.truncate(color.blue() + level)
+                self.img.setPixelColor(x, y, QColor(r, g, b))
+        self.pixmap.convertFromImage(self.img)
+        self.imageBoard.setPixmap(self.pixmap)
+        self.imageBoard.setAlignment(Qt.AlignCenter)
+
+    # adjust saturation UI dialog
+    def change_saturation(self):
+        text, ok = QInputDialog.getText(self, 'Text Input Dialog', 'Enter saturation value (-1.0, 0, 0.5, ...):')
+        if ok:
+            self.change_saturation_core(float(text))
+
+    # adjust saturation core function
+    def change_saturation_core(self, level):
+        self.pixmap.save('temp/temp.png')
+        self.img = Image.open('temp/temp.png')
+        converter = ImageEnhance.Color(self.img)
+        img2 = converter.enhance(level)
+        img2.save('temp/temp.png')
+        self.pixmap = QPixmap('temp/temp.png')
+        os.remove('temp/temp.png')
+        self.imageBoard.setPixmap(self.pixmap)
+        self.imageBoard.setAlignment(Qt.AlignCenter)
+
+    # adjust contrast UI dialog
+    def change_contrast(self):
+        text, ok = QInputDialog.getText(self, 'Text Input Dialog', 'Enter contrast value (-255 ~ 255):')
+        if ok:
+            self.change_contrast_core(float(text))
+
+    # adjust contrast core function
+    def change_contrast_core(self, level):
+        self.img = self.pixmap.toImage()
+        factor = float((259 * (level + 255)) / (255 * (259 - level)))
+        for x in range(self.img.width()):
+            for y in range(self.img.height()):
+                color = QColor(self.img.pixel(x, y))
+    #                print(factor * (color.red()-128) + 128)
+                r = self.truncate(factor * (color.red()-128) + 128)
+                g = self.truncate(factor * (color.green()-128) + 128)
+                b = self.truncate(factor * (color.blue()-128) + 128)
+                self.img.setPixelColor(x, y, QColor(r, g, b))
+        self.pixmap.convertFromImage(self.img)
+        self.imageBoard.setPixmap(self.pixmap)
+        self.imageBoard.setAlignment(Qt.AlignCenter)
+
+    # change to black and white UI dialog
+    def blackwhite(self):
+        choice = QMessageBox.question(self, 'Cancel', "Change image to black and white?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if choice == QMessageBox.Yes:
+            self.blackwhite_core()
+
+    # change image to black and white
+    def blackwhite_core(self):
+        self.img = self.pixmap.toImage()
+        for x in range(self.img.width()):
+            for y in range(self.img.height()):
+                color = QColor(self.img.pixel(x, y))
+                gray = 0.2989 * color.red() + 0.5870 * color.green() + 0.1140 * color.blue()
+                if gray > 120:   # may need to update 100
+                    self.img.setPixelColor(x, y, QColor(255, 255, 255))
+                else:
+                    self.img.setPixelColor(x, y, QColor(0, 0, 0))
+        self.pixmap.convertFromImage(self.img)
+        self.imageBoard.setPixmap(self.pixmap)
+        self.imageBoard.setAlignment(Qt.AlignCenter)
+
+    # truncate color values >255 or <0
+    def truncate(self, color):
+        if color < 0:
+            return 0
+        elif color > 255:
+            return 255
+        else:
+            return int(color)
+
+    # blur image UI dialog
+    def blur(self):
+        text, ok = QInputDialog.getText(self, 'Text Input Dialog', 'Enter a value for blur degree :')
+        if ok:
+            self.blur_core(float(text))
+
+    # blur image core function
+    def blur_core(self, radi):
+        self.pixmap.save('temp/temp.png')
+        self.img = Image.open('temp/temp.png')
+        self.img = self.img.filter(ImageFilter.GaussianBlur(radius=radi))
+        self.img.save('temp/temp.png')
+        self.pixmap = QPixmap('temp/temp.png')
+        os.remove('temp/temp.png')
+        self.imageBoard.setPixmap(self.pixmap)
+        self.imageBoard.setAlignment(Qt.AlignCenter)
+
+    # sharpen the image UI dialog
+    def sharpen(self):
+        choice = QMessageBox.question(self, 'Cancel', "Sharpen the image?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if choice == QMessageBox.Yes:
+            self.sharpen_core()
+
+    # sharpen the image core function
+    def sharpen_core(self):
+        self.pixmap.save('temp/temp.png')
+        self.img = Image.open('temp/temp.png')
+        self.img = self.img.filter(ImageFilter.SHARPEN())
+        self.img.save('temp/temp.png')
+        self.pixmap = QPixmap('temp/temp.png')
+        os.remove('temp/temp.png')
+        self.imageBoard.setPixmap(self.pixmap)
+        self.imageBoard.setAlignment(Qt.AlignCenter)
