@@ -30,6 +30,7 @@ class Ui_MainWindow(QWidget):
         super().__init__()
         self.prModel = editorModel()
         self.duration = 0
+        self.isPlaying = 0
 
     def setupUi(self, MainWindow):
 
@@ -205,7 +206,18 @@ class Ui_MainWindow(QWidget):
         self.connectButtons()
 
     def play(self):
+        changeList = []
+        changeList.append(0)
+        total = 0
+        c = 0
         print(self.duration)
+        # self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        self.playButton.setEnabled(False)
+        self.isPlaying = 1
+        for durations in self.prModel.durations:
+            changeList.append(total + durations)
+            total = changeList[len(changeList)-1]
+        changeList.pop()
         # self.animation.setDuration(self.duration*1000)
         # self.animation.updateState(self.update)
         # self.animation.setEndValue(self.horizontalSlider.setValue(self.duration))
@@ -215,8 +227,17 @@ class Ui_MainWindow(QWidget):
             # sys.stdout.write("{:2d}".format(remaining))
             # sys.stdout.flush()
             self.horizontalSlider.setValue(remaining)
+            if remaining in changeList:
+                self.playView(c)
+                c += 1
             self.horizontalSlider.repaint()
             time.sleep(1)
+        self.isPlaying = 0
+        self.horizontalSlider.setValue(0)
+        self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.playView(0)
+        self.playButton.setEnabled(True)
+
 
     def getValue(self):
         print(self.horizontalSlider.value())
@@ -291,6 +312,12 @@ class Ui_MainWindow(QWidget):
         self.imageBoard.setObjectName('imageBoard')
         self.imageBoard.setVisible(1)
 
+    def playView(self, imgIndex):
+        self.img = QPixmap(self.prModel.labelList[imgIndex])
+        self.img = self.scaleImage(self.img)
+        self.imageBoard.setPixmap(self.img)
+        self.imageBoard.setAlignment(Qt.AlignCenter)
+
     # This method creates a timeline. It is simply just a QLabel.
     # def createTimeline(self):
     #     self.myTimeline = QLabel(self.centralwidget)
@@ -344,8 +371,8 @@ class Ui_MainWindow(QWidget):
             imgDuration.setText(str(displayLength)+ 's')
             imgDuration.move(imgProp/2,685)
             imgDuration.setVisible(1)
-            self.prModel.durationLabels.append(imgDuration)
-            self.prModel.labelList.append(self.myImage)
+            # self.prModel.durationLabels.append(imgDuration)
+            # self.prModel.labelList.append(self.myImage)
             self.prModel.timelineIsEmpty = 0
             self.prModel.thumbnailLengthTracker += imgProp + 21
         else:
@@ -359,13 +386,14 @@ class Ui_MainWindow(QWidget):
             self.myImage.setPixmap(pixmap)
             self.myImage.setAlignment(Qt.AlignCenter)
             self.myImage.setVisible(1)
-            self.prModel.labelList.append(self.myImage)
             self.prModel.thumbnailLengthTracker += imgProp
             imgDuration = QLabel(self.centralwidget)
             imgDuration.setText(str(displayLength)+ 's')
             imgDuration.setVisible(1)
             imgDuration.move(self.prModel.thumbnailLengthTracker-(imgProp/2),685)
-            self.prModel.durationLabels.append(imgDuration)
+
+        self.prModel.labelList.append(self.filePath)
+        self.prModel.durationLabels.append(imgDuration)
 
     # this method scales the images based on their widths and heights
     def scaleImage(self, img, width=521, height=455):
