@@ -332,7 +332,7 @@ class Ui_MainWindow(QWidget):
         self.treeView.doubleClicked.connect(self.treeFileClicked)          # Action for double-clicking images
         self.actionQuit.triggered.connect(self.quitProgram)                # Action for Quit
         self.playButton.clicked.connect(self.play)                         # Action for Play Button
-        self.playAudioButton.clicked.connect(self.ProccessSound)               # Action for Play Audio Button
+        self.playAudioButton.clicked.connect(self.playSound)               # Action for Play Audio Button
         self.addButton.clicked.connect(self.addd)                 # Action for adding images to timeline
         self.addAudioButton.clicked.connect(self.addAudioToTimeline)       # Action for adding audio files to timeline
         self.actionBrightness.triggered.connect(self.change_brightness)    # Action for brightness
@@ -572,12 +572,6 @@ class Ui_MainWindow(QWidget):
             self.myAudio.setVisible(1)
             self.prModel.thumbnailLengthTracker += imgProp
 
-    def ProccessSound(self):
-        _thread.start_new_thread( self.playSound, () )
-
-        while 1:
-            pass
-
     def playSound(self):
         self.sound = QSoundEffect()
         self.sound.setSource(QUrl.fromLocalFile(self.audioPath))
@@ -737,23 +731,3 @@ class Ui_MainWindow(QWidget):
         os.remove('temp/temp.png')
         self.imageBoard.setPixmap(self.pixmap)
         self.imageBoard.setAlignment(Qt.AlignCenter)
-
-class myThread (threading.Thread):
-   def __init__(self, threadID, start, end):
-      threading.Thread.__init__(self)
-      self.threadID = threadID
-      self.stime = start
-      self.etime = end
-
-   def run(self):
-      print ("Starting " + self.name)
-      print_time(self.name, self.counter, 5)
-      print ("Exiting " + self.name)
-
-   def playSound(self):
-    self.sound = QSoundEffect()
-    self.sound.setSource(QUrl.fromLocalFile(self.audioPath))
-    self.sound.setLoopCount(QSoundEffect.Infinite)
-    self.sound.play()
-    start_time=time.time()
-    end_time = start_time + 5
