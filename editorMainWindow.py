@@ -17,15 +17,25 @@ graphical user interface of the application. It is invoked by main.py.
 """
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, QWidget, QPushButton, QLineEdit, QMessageBox, QInputDialog, QStyle
+from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, QWidget, QPushButton, QLineEdit, QMessageBox, QInputDialog, QStyle, QFileDialog
 from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtCore import Qt
 import os, sys, time
 from programModel import *
 from PIL import ImageFilter, Image, ImageEnhance
+import time
+import pygame
+import _thread
+import threading
+#pip3 install pygame
+#pip3 install playsound
+#pip3 install -U PyObjC
+from playsound import playsound
 
 class Ui_MainWindow(QWidget):
 
+    # Constructor
     def __init__(self):
         super().__init__()
         self.prModel = editorModel()
@@ -34,18 +44,13 @@ class Ui_MainWindow(QWidget):
 
     def setupUi(self, MainWindow):
 
-        # initiate self pixmap
+        # Initiate self pixmap
         self.pixmap =QPixmap()
-#        self.img = self.pixmap.toImage()
-
         MainWindow.setObjectName("MainWindow")
-        #Window Size
-        MainWindow.resize(1024, 768)
+        MainWindow.resize(1024, 768)     # Window size
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
-
         MainWindow.setCentralWidget(self.centralwidget)
-
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1024, 22))
         self.menubar.setObjectName("menubar")
@@ -62,9 +67,7 @@ class Ui_MainWindow(QWidget):
         self.menuAbout = QtWidgets.QMenu(self.menubar)
         self.menuAbout.setAcceptDrops(False)
         self.menuAbout.setObjectName("menuAbout")
-
         MainWindow.setMenuBar(self.menubar)
-
         self.actionOpen_Image = QtWidgets.QAction(MainWindow)
         self.actionOpen_Image.setObjectName("actionOpen_Image")
         self.actionOpen_Audio_File = QtWidgets.QAction(MainWindow)
@@ -116,6 +119,7 @@ class Ui_MainWindow(QWidget):
         self.actionShare_TwitterImg = QtWidgets.QAction(MainWindow)
         self.actionBlur.setObjectName("actionShare_TwitterImg")
 
+        # Adding action for the item under the File menu
         self.menuFile.addAction(self.actionOpen_Image)
         self.menuFile.addAction(self.actionOpen_Audio_File)
         self.menuFile.addAction(self.actionSave)
@@ -125,12 +129,15 @@ class Ui_MainWindow(QWidget):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
 
+        # Adding action for the item under the Edit menu
         self.menuEdit.addAction(self.actionCut)
         self.menuEdit.addAction(self.actionCopy)
         self.menuEdit.addAction(self.actionPaste)
         self.menuEdit.addAction(self.actionSelect_All)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionPreferences)
+
+        # Adding action for the item under the Image menu
         self.menuImage.addAction(self.actionBrightness)
         self.menuImage.addAction(self.actionContrast)
         self.menuImage.addAction(self.actionExposure)
@@ -144,13 +151,16 @@ class Ui_MainWindow(QWidget):
         self.menuImage.addAction(self.actionResize)
         self.menuImage.addAction(self.actionCrop)
 
+        # Adding action for the item under the Filter menu
         self.menuFilter.addAction(self.actionPhoto_Filter)
         self.menuFilter.addAction(self.actionSharpen)
         self.menuFilter.addAction(self.actionBlur)
 
+        # Adding action for the item under the Share menu
         self.menuShare.addAction(self.actionShare_TwitterVid)
         self.menuShare.addAction(self.actionShare_TwitterImg)
 
+        # Adding action for the actual menubar
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuImage.menuAction())
@@ -159,48 +169,89 @@ class Ui_MainWindow(QWidget):
         self.menubar.addAction(self.menuAbout.menuAction())
         self.menubar.setNativeMenuBar(False)
 
+        # Setting the names of the items of menubar
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
+        # Creating the add button.
+        # This button is responsible to add images to the timeline
         self.addButton = QPushButton(self.centralwidget)
-        self.addButton.setText("Add")
+        self.addButton.setText("Add Image")
         self.addButton.move(160, 480)
-        self.addButton.clicked.connect(self.addToTimeline)
 
+        # Creating the add_audio button.
+        # This button is responsible to add images to the timeline
+        self.addAudioButton = QPushButton(self.centralwidget)
+        self.addAudioButton.setText("Add Audio")
+        self.addAudioButton.move(290, 705)
+
+        # Creating the play button.
+        # When the user clicks on this button, all the images with their
+        # respective durations should be shown and played.
+        self.playButton = QPushButton(self.centralwidget)
+        self.playButton.setEnabled(True)
+        self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.playButton.move(745.5, 480)
+
+        # Creating the play button.
+        # When the user clicks on this button, all the images with their
+        # respective durations should be shown and played.
+        self.playAudioButton = QPushButton(self.centralwidget)
+        self.playAudioButton.setEnabled(True)
+        self.playAudioButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.playAudioButton.move(390, 705)
+
+        # Creating the display time label.
+        # This label is used to just describe the textbox lcoated next to it.
         self.displayTimeLabel = QLabel(self.centralwidget)
         self.displayTimeLabel.move(20, 485)
         self.displayTimeLabel.setText("Display time:")
         self.displayTimeBox = QLineEdit(self.centralwidget)
         self.displayTimeBox.setGeometry(QtCore.QRect(110, 485, 50, 20))
 
+        # Creating Start time labels and text boxes for Images
+        self.imgStartTimeLabel = QLabel(self.centralwidget)
+        self.imgStartTimeLabel.move(280, 485)
+        self.imgStartTimeLabel.setText("Start time:")
+        self.imgStartTimeBox = QLineEdit(self.centralwidget)
+        self.imgStartTimeBox.setGeometry(QtCore.QRect(350, 485, 50, 20))
+
+        # Creating End time labels and text boxes for Images
+        self.imgEndTimeLabel = QLabel(self.centralwidget)
+        self.imgEndTimeLabel.move(410, 485)
+        self.imgEndTimeLabel.setText("End time:")
+        self.imgEndTimeBox = QLineEdit(self.centralwidget)
+        self.imgEndTimeBox.setGeometry(QtCore.QRect(470, 485, 50, 20))
+
+        # Creating Start time labels and text boxes for audio files
+        self.audioStartTimeLabel = QLabel(self.centralwidget)
+        self.audioStartTimeLabel.move(20, 709)
+        self.audioStartTimeLabel.setText("Start time:")
+        self.audioStartTimeBox = QLineEdit(self.centralwidget)
+        self.audioStartTimeBox.setGeometry(QtCore.QRect(90, 709, 50, 20))
+
+        # Creating End time labels and text boxes for audio files
+        self.audioEndTimeLabel = QLabel(self.centralwidget)
+        self.audioEndTimeLabel.move(170, 709)
+        self.audioEndTimeLabel.setText("End time:")
+        self.audioEndTimeBox = QLineEdit(self.centralwidget)
+        self.audioEndTimeBox.setGeometry(QtCore.QRect(240, 709, 50, 20))
+
+        # This is the Total Time label.
+        # We need to show the total time of the slideshow using this label.
         self.totalTimeLabel = QLabel(self.centralwidget)
-        self.totalTimeLabel.move(900, 685)
+        self.totalTimeLabel.move(900, 710)
         self.totalTimeLabel.setText("Total time: ")
+        self.durationLabel = QLabel(self.centralwidget)
+        self.durationLabel.move(970, 710)
+        self.durationLabel.setText("0")
+        self.durationLabel.setFixedWidth(20)
 
-        self.timeline = QtWidgets.QFrame(self.centralwidget)
-        self.timeline.setGeometry(QtCore.QRect(16, 540, 994, 130))
-        self.timeline.setStyleSheet("background-color: rgb(186, 186, 186)")
-        self.timeline.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.timeline.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.timeline.setObjectName("Timeline")
-
-        self.horizontalSlider = QtWidgets.QSlider(self.timeline)
-        self.horizontalSlider.setCursor(Qt.SizeHorCursor)
-        self.horizontalSlider.setGeometry(QtCore.QRect(0, 0, 997, 40))
-        self.horizontalSlider.setOrientation(QtCore.Qt.Horizontal)
-        self.horizontalSlider.setObjectName("horizontalSlider")
-        self.horizontalSlider.setRange(0,60)
-        self.animation = QPropertyAnimation(self.horizontalSlider)
-        self.animation.setStartValue(self.horizontalSlider.minimum())
-        # self.horizontalSlider.sliderMoved.connect(self.getValue)
-
-        self.playButton = QPushButton(self.centralwidget)
-        self.playButton.setEnabled(True)
-        self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        self.playButton.move(745.5, 480)
-
-        # self.createTimeline()
+        self.createTimeline()
+        self.createAudioTimeline()
+        self.createSlider()
         self.myImage = QLabel(self.centralwidget)
+        self.myAudio = QLabel(self.centralwidget)
         self.createTreeView()
         self.createBoard()
         self.connectButtons()
@@ -278,17 +329,20 @@ class Ui_MainWindow(QWidget):
         self.actionShare_TwitterImg.setText(_translate("MainWindow", "Share Image on Twitter"))
 
     def connectButtons(self):
-        # When the user double clicks on an image file on the tree bar
-        self.treeView.doubleClicked.connect(self.treeFileClicked)
-        # Action for File->Quit
-        self.actionQuit.triggered.connect(self.quitProgram)
-        self.playButton.clicked.connect(self.play)
-        self.actionBrightness.triggered.connect(self.change_brightness)         # Action for brightness
-        self.actionContrast.triggered.connect(self.change_contrast)             # Action for contrast
-        self.actionHue_Saturation.triggered.connect(self.change_saturation)     # Action for saturation
-        self.actionBlack_White.triggered.connect(self.blackwhite)               # Action for black and white
-        self.actionBlur.triggered.connect(self.blur)                            # Action to blur the image
-        self.actionSharpen.triggered.connect(self.sharpen)                      # Action to sharpen the image
+        self.treeView.doubleClicked.connect(self.treeFileClicked)          # Action for double-clicking images
+        self.actionQuit.triggered.connect(self.quitProgram)                # Action for Quit
+        self.playButton.clicked.connect(self.play)                         # Action for Play Button
+        self.playAudioButton.clicked.connect(self.ProccessSound)               # Action for Play Audio Button
+        self.addButton.clicked.connect(self.addd)                 # Action for adding images to timeline
+        self.addAudioButton.clicked.connect(self.addAudioToTimeline)       # Action for adding audio files to timeline
+        self.actionBrightness.triggered.connect(self.change_brightness)    # Action for brightness
+        self.actionContrast.triggered.connect(self.change_contrast)        # Action for contrast
+        self.actionHue_Saturation.triggered.connect(self.change_saturation)# Action for saturation
+        self.actionBlack_White.triggered.connect(self.blackwhite)          # Action for black and white
+        self.actionBlur.triggered.connect(self.blur)                       # Action to blur the image
+        self.actionSharpen.triggered.connect(self.sharpen)                 # Action to sharpen the image
+        self.actionOpen_Audio_File.triggered.connect(self.importAudio)     # Action for Open Audio...
+        self.actionOpen_Image.triggered.connect(self.importImage)          # Action for Open Image...
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
@@ -297,10 +351,8 @@ class Ui_MainWindow(QWidget):
         self.treeView.setGeometry(QtCore.QRect(20, 10, 441, 461))
         self.treeView.setObjectName("treeView")
         model = QFileSystemModel()
-        #model.setRootPath(str(os.getcwd()))
         model.setRootPath('')
         self.treeView.setModel(model)
-        #self.treeView.setRootIndex(model.index(str(os.getcwd())))
 
     # This is where the selected picture is shown.
     # We create the board using a QLabel once, and then we keep updating it
@@ -312,18 +364,44 @@ class Ui_MainWindow(QWidget):
         self.imageBoard.setObjectName('imageBoard')
         self.imageBoard.setVisible(1)
 
+    # This is our timeline, where we place images on.
+    # We are using a QFrame to imitate the feeling of an actual timeline.
+    def createTimeline(self):
+        self.timeline = QtWidgets.QFrame(self.centralwidget)
+        self.timeline.setGeometry(QtCore.QRect(16, 512, 994, 130))
+        self.timeline.setStyleSheet("background-color: rgb(186, 186, 186)")
+        self.timeline.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.timeline.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.timeline.setObjectName("Timeline")
+
+    # This is our timeline for the audio QFileSystemModel
+    # We are using a QFrame as well.
+    def createAudioTimeline(self):
+        self.audiotimeline = QtWidgets.QFrame(self.centralwidget)
+        self.audiotimeline.setGeometry(QtCore.QRect(16, 655, 994, 50))
+        self.audiotimeline.setStyleSheet("background-color: rgb(186, 186, 186)")
+        self.audiotimeline.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.audiotimeline.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.audiotimeline.setObjectName("audioTimeline")
+
+    # This is the slider located on the timeline.
+    # We use it to track the duration of images when they are being played.
+    def createSlider(self):
+        self.horizontalSlider = QtWidgets.QSlider(self.timeline)
+        self.horizontalSlider.setCursor(Qt.SizeHorCursor)
+        self.horizontalSlider.setGeometry(QtCore.QRect(0, 0, 997, 40))
+        self.horizontalSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.horizontalSlider.setObjectName("horizontalSlider")
+        self.horizontalSlider.setRange(0,60)
+        self.animation = QPropertyAnimation(self.horizontalSlider)
+        self.animation.setStartValue(self.horizontalSlider.minimum())
+        # self.horizontalSlider.sliderMoved.connect(self.getValue)
+
     def playView(self, imgIndex):
         self.img = QPixmap(self.prModel.labelList[imgIndex])
         self.img = self.scaleImage(self.img)
         self.imageBoard.setPixmap(self.img)
         self.imageBoard.setAlignment(Qt.AlignCenter)
-
-    # This method creates a timeline. It is simply just a QLabel.
-    # def createTimeline(self):
-    #     self.myTimeline = QLabel(self.centralwidget)
-    #     self.myTimeline.setStyleSheet('border: 3px solid purple; background-color: #58585b')
-    #     self.myTimeline.setGeometry(QtCore.QRect(16, 540, 994, 130))
-    #     self.myTimeline.setObjectName('imageBoard')
 
     # This is the function that is executed when the user double-clicks on a filePath
     # via treeView. This function gets the path of the image file and changes the image accordingly.
@@ -341,45 +419,34 @@ class Ui_MainWindow(QWidget):
     # This method is executed when the user clicks on the add button.
     # It basically adds the image to the timeline with the picture of the image
     # appearing on the timeline.
-    def addToTimeline(self):
-        # Get the display length from the text box
-        displayLength = int(self.displayTimeBox.text())
-        imgProp = ((displayLength/60)*985)
-
-        # Save the duration in the below list
-        self.prModel.durations.append(displayLength)
-        self.duration += displayLength
-        self.totalTimeLabel.setText("Total time: " + str(self.duration))
+    def addd(self):
         if self.prModel.timelineIsEmpty == 1:
-            # self.myImage = QLabel(self.centralwidget)
-            # self.myImage.setParent(self.centralwidget)
-            # print(self.centralwidget.parentWidget())
-            # print(self.timeline.parent())
-            # print(self.timeline.parentWidget())
-            # print(self.myImage.parentWidget())
-            # self.myImage.setStyleSheet('border: 3px solid green')
-            # We resize the thumbnail according to display length
+            startTime = int(self.imgStartTimeBox.text())
+            endTime = int(self.imgEndTimeBox.text())
+            displayLength = endTime - startTime
             imgProp = ((displayLength/60)*985)
-            self.myImage.setGeometry(QtCore.QRect(21, 580, imgProp, 85))
-            # self.myImage.raise_()
+            self.myImage.setGeometry(QtCore.QRect(16.41*(startTime+1), 550, imgProp, 85))
             pixmap = QPixmap(self.filePath)
             pixmap = self.scaleImage(pixmap, imgProp, 85)
             self.myImage.setPixmap(pixmap)
             self.myImage.setAlignment(Qt.AlignCenter)
+            #self.myImage.setStyleSheet('border: 3px solid green')
             self.myImage.setVisible(1)
+            self.prModel.timelineIsEmpty = 0
+            self.prModel.thumbnailLengthTracker += imgProp + 16.41
             imgDuration = QLabel(self.centralwidget)
             imgDuration.setText(str(displayLength)+ 's')
             imgDuration.move(imgProp/2,685)
-            imgDuration.setVisible(1)
-            # self.prModel.durationLabels.append(imgDuration)
-            # self.prModel.labelList.append(self.myImage)
-            self.prModel.timelineIsEmpty = 0
-            self.prModel.thumbnailLengthTracker += imgProp + 21
+            #imgDuration.setVisible(1)
         else:
+            startTime = int(self.imgStartTimeBox.text())
+            endTime = int(self.imgEndTimeBox.text())
+            displayLength = endTime - startTime
+            imgProp = ((displayLength/60)*985)
             self.myImage = QLabel(self.centralwidget)
-            # self.myImage.setStyleSheet('border: 3px solid green')
+            #self.myImage.setStyleSheet('border: 3px solid green')
             # We resize the thumbnail according to display length
-            self.myImage.setGeometry(QtCore.QRect(self.prModel.thumbnailLengthTracker, 580, imgProp, 85))
+            self.myImage.setGeometry(QtCore.QRect(16.41*(startTime+1), 550, imgProp, 85))
             self.myImage.raise_()
             pixmap = QPixmap(self.filePath)
             pixmap = self.scaleImage(pixmap, imgProp, 85)
@@ -389,21 +456,71 @@ class Ui_MainWindow(QWidget):
             self.prModel.thumbnailLengthTracker += imgProp
             imgDuration = QLabel(self.centralwidget)
             imgDuration.setText(str(displayLength)+ 's')
+            #imgDuration.setVisible(1)
+            imgDuration.move(self.prModel.thumbnailLengthTracker-(imgProp/2),685)
+
+        self.prModel.labelList.append(self.filePath)
+        self.prModel.durationLabels.append(endTime - startTime)
+
+
+    def addToTimeline(self):
+        # Get the display length from the text box
+        displayLength = int(self.displayTimeBox.text())
+        imgProp = ((displayLength/60)*985)
+
+        # Save the duration in the below list
+        self.prModel.durations.append(displayLength)
+        self.duration += displayLength
+        self.durationLabel.setText(str(self.duration))
+        if self.prModel.timelineIsEmpty == 1:
+            imgProp = ((displayLength/60)*985)
+            self.myImage.setGeometry(QtCore.QRect(21, 580, imgProp, 85))
+            # self.myImage.raise_()
+            pixmap = QPixmap(self.filePath)
+            pixmap = self.scaleImage(pixmap, imgProp, 85)
+            self.myImage.setPixmap(pixmap)
+            self.myImage.setAlignment(Qt.AlignCenter)
+            #self.myImage.setStyleSheet('border: 3px solid green')
+            self.myImage.setVisible(1)
+            imgDuration = QLabel(self.centralwidget)
+            imgDuration.setText(str(displayLength)+ 's')
+            imgDuration.move(imgProp/2,685)
+            imgDuration.setVisible(1)
+            #self.prModel.durationLabels.append(imgDuration)
+            #self.prModel.labelList.append(self.myImage)
+            self.prModel.timelineIsEmpty = 0
+            self.prModel.thumbnailLengthTracker += imgProp + 21
+        else:
+            self.myImage = QLabel(self.centralwidget)
+            #self.myImage.setStyleSheet('border: 3px solid green')
+            # We resize the thumbnail according to display length
+            self.myImage.setGeometry(QtCore.QRect(self.prModel.thumbnailLengthTracker, 580, imgProp, 85))
+            self.myImage.raise_()
+            pixmap = QPixmap(self.filePath)
+            pixmap = self.scaleImage(pixmap, imgProp, 85)
+            self.myImage.setPixmap(pixmap)
+            self.myImage.setAlignment(Qt.AlignCenter)
+            self.myImage.setVisible(1)
+            #self.prModel.labelList.append(self.myImage)
+            self.prModel.thumbnailLengthTracker += imgProp
+            imgDuration = QLabel(self.centralwidget)
+            imgDuration.setText(str(displayLength)+ 's')
             imgDuration.setVisible(1)
             imgDuration.move(self.prModel.thumbnailLengthTracker-(imgProp/2),685)
+            #self.prModel.durationLabels.append(imgDuration)
 
         self.prModel.labelList.append(self.filePath)
         self.prModel.durationLabels.append(imgDuration)
 
-    # this method scales the images based on their widths and heights
+    # This method scales the images based on their widths and heights
     def scaleImage(self, img, width=521, height=455):
         try:
             self.IMAGE_HEIGHT = height
             self.IMAGE_WIDTH = width
             oldHeight = img.height()
             oldWidth = img.width()
-            # We need to know whether we should scale by height or width
-            # This way, we can fit images correctly
+            # We need to know whether we should scale by height or width.
+            # This way, we can fit images correctly.
             if (oldHeight > oldWidth):
                 newWidth = (self.IMAGE_HEIGHT * oldWidth) / oldHeight
                 temp = img.scaled(newWidth, self.IMAGE_HEIGHT)
@@ -421,6 +538,81 @@ class Ui_MainWindow(QWidget):
         if choice == QMessageBox.Yes:
             print('Application closed successfully.')
             sys.exit()
+
+    def importAudio(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        self.audioPath, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;mp3 Files (*.mp3);;WMA Files (*.wma);;WAVE Files (*.wave)", options=options)
+        if self.audioPath:
+            print(self.audioPath)
+
+    def addAudioToTimeline(self):
+        if self.prModel.timelineIsEmpty == 1:
+            startTime = int(self.audioStartTimeBox.text())
+            endTime = int(self.audioEndTimeBox.text())
+            displayLength = endTime - startTime
+            imgProp = ((displayLength/60)*985)
+            self.myAudio.setGeometry(QtCore.QRect(16.41*(startTime+1), 656, imgProp, 48))
+            self.myAudio.setAlignment(Qt.AlignCenter)
+            self.myAudio.setStyleSheet('border: 2px solid red')
+            self.myAudio.setText(str(self.audioPath))
+            self.myAudio.setVisible(1)
+            self.prModel.timelineIsEmpty = 0
+            self.prModel.thumbnailLengthTracker += imgProp + 16.41
+        else:
+            startTime = int(self.audioStartTimeBox.text())
+            endTime = int(self.audioEndTimeBox.text())
+            displayLength = endTime - startTime
+            imgProp = ((displayLength/60)*985)
+            self.myAudio = QLabel(self.centralwidget)
+            self.myAudio.setStyleSheet('border: 2px solid red')
+            self.myAudio.setGeometry(QtCore.QRect(16.41*(startTime+1), 656, imgProp, 48))
+            self.myAudio.setText(str(self.audioPath))
+            self.myAudio.setAlignment(Qt.AlignCenter)
+            self.myAudio.setVisible(1)
+            self.prModel.thumbnailLengthTracker += imgProp
+
+    def ProccessSound(self):
+        _thread.start_new_thread( self.playSound, () )
+
+        while 1:
+            pass
+
+    def playSound(self):
+        self.sound = QSoundEffect()
+        self.sound.setSource(QUrl.fromLocalFile(self.audioPath))
+        self.sound.setLoopCount(QSoundEffect.Infinite)
+        self.sound.play()
+        start_time=time.time()
+        end_time = start_time + 5
+        #while True:
+        #    if time.time() == end_time:
+        #        break
+        #while time.time() < start_time + 5:
+        #    pass
+        #self.sound.stop()
+        #playsound(self.audioPath, block = False)
+        #playsound(None)
+
+        #pygame.init()
+        #pygame.mixer.init()
+        #sounda= pygame.mixer.Sound(self.audioPath)
+        #sounda.play()
+
+    def importImage(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        imgPath, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;jpg Files (*.jpg);;jpeg Files (*.jpeg);;bmp Files (*.bmp)", options=options)
+        if imgPath:
+            print(imgPath)
+            self.filePath = imgPath
+        try:
+            self.pixmap = QPixmap(imgPath)
+            self.pixmap = self.scaleImage(self.pixmap)
+            self.imageBoard.setPixmap(self.pixmap)
+            self.imageBoard.setAlignment(Qt.AlignCenter)
+        except:
+            print('Not an image file! Please try another file.')
 
     # adjust brightness UI dialog
     def change_brightness(self):
@@ -545,3 +737,23 @@ class Ui_MainWindow(QWidget):
         os.remove('temp/temp.png')
         self.imageBoard.setPixmap(self.pixmap)
         self.imageBoard.setAlignment(Qt.AlignCenter)
+
+class myThread (threading.Thread):
+   def __init__(self, threadID, start, end):
+      threading.Thread.__init__(self)
+      self.threadID = threadID
+      self.stime = start
+      self.etime = end
+
+   def run(self):
+      print ("Starting " + self.name)
+      print_time(self.name, self.counter, 5)
+      print ("Exiting " + self.name)
+
+   def playSound(self):
+    self.sound = QSoundEffect()
+    self.sound.setSource(QUrl.fromLocalFile(self.audioPath))
+    self.sound.setLoopCount(QSoundEffect.Infinite)
+    self.sound.play()
+    start_time=time.time()
+    end_time = start_time + 5
