@@ -801,7 +801,7 @@ class Ui_MainWindow(QWidget):
         self.endpos[0] = event.pos().x()
         self.endpos[1] = event.pos().y()
         # crop the image
-        cropped = self.pixmap.copy(self.startpos[0], self.startpos[1], self.endpos[0], self.endpos[1])
+        cropped = self.pixmap.copy(self.startpos[0], self.startpos[1], self.endpos[0] - self.startpos[0], self.endpos[1] - self.startpos[1])
         self.imageBoard.setPixmap(cropped)
         self.imageBoard.setAlignment(Qt.AlignCenter)
         self.isCropOn = False
