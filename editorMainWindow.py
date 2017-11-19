@@ -2,7 +2,6 @@
 
 """
 ~~~~~ A Photo Editor and Slideshow Maker in Python3 Using PyQt5 ~~~~~
-
 ~~~~~~~~~ Contributors: Uzair Inamdar, Jizhou Yang, Saman Porhemmat
 ~~~~~~~~~ All Rights Reserved
 ~~~~~~~~~
@@ -10,10 +9,8 @@
 ~~~~~~~~~ Course: CSC 690
 ~~~~~~~~~ Final Project
 ~~~~~~~~~ Date: Fall 2017
-
 This piece of code handles the view. Basically, it is responsible for the
 graphical user interface of the application. It is invoked by main.py.
-
 """
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -343,6 +340,10 @@ class Ui_MainWindow(QWidget):
         self.actionSharpen.triggered.connect(self.sharpen)                 # Action to sharpen the image
         self.actionOpen_Audio_File.triggered.connect(self.importAudio)     # Action for Open Audio...
         self.actionOpen_Image.triggered.connect(self.importImage)          # Action for Open Image...
+        self.actionSharpen.triggered.connect(self.sharpen)                 # Action to sharpen the image
+        self.actionColor_Balance.triggered.connect(self.balance)           # Action to color balance
+        self.actionResize.triggered.connect(self.myresize)                 # Action to resize image
+        self.actionSave.triggered.connect(self.savefile)                   # Action to save image        
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
@@ -723,11 +724,53 @@ class Ui_MainWindow(QWidget):
 
     # sharpen the image core function
     def sharpen_core(self):
+        level = 2.0    # default level for sharpen the image
         self.pixmap.save('temp/temp.png')
         self.img = Image.open('temp/temp.png')
-        self.img = self.img.filter(ImageFilter.SHARPEN())
-        self.img.save('temp/temp.png')
-        self.pixmap = QPixmap('temp/temp.png')
-        os.remove('temp/temp.png')
+        enhancer = ImageEnhance.Sharpness(self.img)
+        self.img = enhancer.enhance(level)
+        self.img.save('temp/temp.png') 
+        self.pixmap = QPixmap('temp/temp.png') 
+        os.remove('temp/temp.png')  
         self.imageBoard.setPixmap(self.pixmap)
-        self.imageBoard.setAlignment(Qt.AlignCenter)
+        self.imageBoard.setAlignment(Qt.AlignCenter)       
+        
+    # adjust color balance
+    def balance(self):
+        text, ok = QInputDialog.getText(self, 'Text Input Dialog', 'Enter balance value (0.0 ~ 1.0):')
+        if ok:
+            self.balance_core(float(text))       
+
+    # color balance core function
+    def balance_core(self, level):
+        self.pixmap.save('temp/temp.png')
+        self.img = Image.open('temp/temp.png')
+        enhancer = ImageEnhance.Color(self.img)
+        self.img = enhancer.enhance(level)
+        self.img.save('temp/temp.png') 
+        self.pixmap = QPixmap('temp/temp.png') 
+        os.remove('temp/temp.png')  
+        self.imageBoard.setPixmap(self.pixmap)
+        self.imageBoard.setAlignment(Qt.AlignCenter)     
+
+    # resize iamge UI dialog
+    def myresize(self):
+        text, ok = QInputDialog.getText(self, 'Text Input Dialog', 'Enter a new width (1-512px):')
+        if ok:
+            self.myresize_core(float(text))       
+
+    # resize core function
+    def myresize_core(self, width):
+        self.pixmap = self.pixmap.scaledToWidth(width)
+        self.imageBoard.setPixmap(self.pixmap)
+        self.imageBoard.setAlignment(Qt.AlignCenter)    
+
+    # save file UI dialog    
+    def savefile(self):
+        choice = QMessageBox.question(self, 'Cancel', "Save and overwrite the image?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if choice == QMessageBox.Yes:
+            self.save_core()        
+
+    # save file core function
+    def save_core(self):
+        self.pixmap.save(self.filePath)    
