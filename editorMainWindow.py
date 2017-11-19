@@ -252,6 +252,11 @@ class Ui_MainWindow(QWidget):
         self.createTreeView()
         self.createBoard()
         self.connectButtons()
+    
+        # pixel positions for crop
+        self.startpos = [0, 0]
+        self.endpos = [0, 0]
+        self.isCropOn = False
 
     def play(self):
         changeList = []
@@ -343,7 +348,8 @@ class Ui_MainWindow(QWidget):
         self.actionSharpen.triggered.connect(self.sharpen)                 # Action to sharpen the image
         self.actionColor_Balance.triggered.connect(self.balance)           # Action to color balance
         self.actionResize.triggered.connect(self.myresize)                 # Action to resize image
-        self.actionSave.triggered.connect(self.savefile)                   # Action to save image        
+        self.actionSave.triggered.connect(self.savefile)                   # Action to save image
+        self.actionCrop.triggered.connect(self.cropimg)                    # Action to crop image
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
@@ -364,6 +370,9 @@ class Ui_MainWindow(QWidget):
         self.imageBoard.setGeometry(QtCore.QRect(480, 7, 531, 465))
         self.imageBoard.setObjectName('imageBoard')
         self.imageBoard.setVisible(1)
+    # connect the imageBoard with mouse click event for crop
+        self.imageBoard.mousePressEvent = self.mclick1
+        self.imageBoard.mouseReleaseEvent = self.mrelease1
 
     # This is our timeline, where we place images on.
     # We are using a QFrame to imitate the feeling of an actual timeline.
@@ -773,4 +782,30 @@ class Ui_MainWindow(QWidget):
 
     # save file core function
     def save_core(self):
-        self.pixmap.save(self.filePath)    
+        self.pixmap.save(self.filePath)
+
+    # crop function
+    def cropimg(self):
+        self.isCropOn = True
+        QApplication.setOverrideCursor(Qt.CrossCursor)
+
+    # mouse click event to record start position for crop
+    def mclick1(self, event):
+        self.startpos[0] = event.pos().x()
+        self.startpos[1] = event.pos().y()
+
+    # mouse release event to record end position for crop
+    def mrelease1(self, event):
+        if not self.isCropOn:
+            return
+        self.endpos[0] = event.pos().x()
+        self.endpos[1] = event.pos().y()
+        # crop the image
+        cropped = self.pixmap.copy(self.startpos[0], self.startpos[1], self.endpos[0], self.endpos[1])
+        self.imageBoard.setPixmap(cropped)
+        self.imageBoard.setAlignment(Qt.AlignCenter)
+        self.isCropOn = False
+        QApplication.restoreOverrideCursor()
+
+
+
