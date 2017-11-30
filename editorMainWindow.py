@@ -18,17 +18,32 @@ from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, Q
 from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QThread
 import os, sys, time
 from programModel import *
 from PIL import ImageFilter, Image, ImageEnhance
 import time
-import pygame
-import _thread
 import threading
-#pip3 install pygame
 #pip3 install playsound
 #pip3 install -U PyObjC
 from playsound import playsound
+
+class programThread(QtCore.QObject):
+
+    newData  = QtCore.pyqtSignal(object)
+
+    def __init__(self, parent=None, *args, **kw):
+        QtCore.QObject.__init__(self)
+        self.myInit(*args, **kw)
+
+    def playSound(self):
+        self.sound = QSoundEffect()
+        self.sound.setSource(QUrl.fromLocalFile(self.pathOfTheAudio))
+        self.sound.setLoopCount(QSoundEffect.Infinite)
+        self.sound.play()
+
+    def myInit(self, path):
+        self.pathOfTheAudio = path
 
 class Ui_MainWindow(QWidget):
 
@@ -252,7 +267,7 @@ class Ui_MainWindow(QWidget):
         self.createTreeView()
         self.createBoard()
         self.connectButtons()
-    
+
         # pixel positions for crop
         self.startpos = [0, 0]
         self.endpos = [0, 0]
@@ -334,7 +349,7 @@ class Ui_MainWindow(QWidget):
         self.treeView.doubleClicked.connect(self.treeFileClicked)          # Action for double-clicking images
         self.actionQuit.triggered.connect(self.quitProgram)                # Action for Quit
         self.playButton.clicked.connect(self.play)                         # Action for Play Button
-        self.playAudioButton.clicked.connect(self.playSound)               # Action for Play Audio Button
+        self.playAudioButton.clicked.connect(self.handleAudio)               # Action for Play Audio Button
         self.addButton.clicked.connect(self.addd)                 # Action for adding images to timeline
         self.addAudioButton.clicked.connect(self.addAudioToTimeline)       # Action for adding audio files to timeline
         self.actionBrightness.triggered.connect(self.change_brightness)    # Action for brightness
@@ -555,11 +570,20 @@ class Ui_MainWindow(QWidget):
         self.audioPath, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;mp3 Files (*.mp3);;WMA Files (*.wma);;WAVE Files (*.wave)", options=options)
         if self.audioPath:
             print(self.audioPath)
+            self.prModel.audioTrackQueue.append(self.audioPath)
 
     def addAudioToTimeline(self):
         if self.prModel.timelineIsEmpty == 1:
             startTime = int(self.audioStartTimeBox.text())
             endTime = int(self.audioEndTimeBox.text())
+
+            ##################
+            # New Code for Adding several audio Files below
+            self.prModel.audioStartTimes.append(startTime)
+            self.prModel.audioEndTimes.append(endTime)
+            # New Code for Adding several audio Files above
+            ##################
+
             displayLength = endTime - startTime
             imgProp = ((displayLength/60)*985)
             self.myAudio.setGeometry(QtCore.QRect(16.41*(startTime+1), 656, imgProp, 48))
@@ -572,6 +596,14 @@ class Ui_MainWindow(QWidget):
         else:
             startTime = int(self.audioStartTimeBox.text())
             endTime = int(self.audioEndTimeBox.text())
+
+            ##################
+            # New Code for Adding several audio Files below
+            self.prModel.audioStartTimes.append(startTime)
+            self.prModel.audioEndTimes.append(endTime)
+            # New Code for Adding several audio Files above
+            ##################
+
             displayLength = endTime - startTime
             imgProp = ((displayLength/60)*985)
             self.myAudio = QLabel(self.centralwidget)
@@ -582,13 +614,18 @@ class Ui_MainWindow(QWidget):
             self.myAudio.setVisible(1)
             self.prModel.thumbnailLengthTracker += imgProp
 
-    def playSound(self):
-        self.sound = QSoundEffect()
-        self.sound.setSource(QUrl.fromLocalFile(self.audioPath))
-        self.sound.setLoopCount(QSoundEffect.Infinite)
-        self.sound.play()
-        start_time=time.time()
-        end_time = start_time + 5
+    #def playSound(self):
+        #self.sound = QSoundEffect()
+        #self.sound.setSource(QUrl.fromLocalFile("/Users/saman/Desktop/690/piano-melody.wav"))
+        #self.sound.setLoopCount(QSoundEffect.Infinite)
+        #self.sound.play()
+        #start_time=time.time()
+        #while time.time() < start_time + 3:
+        #    pass
+        #self.sound.stop()
+        #print(msg)
+        #start_time=time.time()
+        #end_time = start_time + 5
         #while True:
         #    if time.time() == end_time:
         #        break
@@ -598,10 +635,36 @@ class Ui_MainWindow(QWidget):
         #playsound(self.audioPath, block = False)
         #playsound(None)
 
-        #pygame.init()
-        #pygame.mixer.init()
-        #sounda= pygame.mixer.Sound(self.audioPath)
-        #sounda.play()
+    def handleAudio(self):
+        for i in range(len(self.prModel.audioStartTimes)):
+            if i==0:
+                self.thread1 = QtCore.QThread()
+                self.smp = programThread(self, self.prModel.audioTrackQueue[i])
+                self.smp.moveToThread(self.thread1)
+                self.thread1.started.connect(self.smp.playSound)
+                self.thread1.start()
+                time.sleep(self.prModel.audioEndTimes[i] - self.prModel.audioStartTimes[i])
+                self.thread1.terminate()
+            else:
+                timeDifference = self.prModel.audioStartTimes[i] - self.prModel.audioEndTimes[i-1]
+                cwd = os.getcwd()
+                silentSoundPath = cwd + "/" + "silence.wav"
+                self.thread2 = QtCore.QThread()
+                self.smp = programThread(self, silentSoundPath)
+                self.smp.moveToThread(self.thread2)
+                self.thread2.started.connect(self.smp.playSound)
+                self.thread2.start()
+                time.sleep(timeDifference)
+                self.thread2.terminate()
+                self.thread1 = QtCore.QThread()
+                self.smp = programThread(self, self.prModel.audioTrackQueue[i])
+                self.smp.moveToThread(self.thread1)
+                self.thread1.started.connect(self.smp.playSound)
+                self.thread1.start()
+                time.sleep(self.prModel.audioEndTimes[i] - self.prModel.audioStartTimes[i])
+                self.thread1.terminate()
+
+
 
     def importImage(self):
         options = QFileDialog.Options()
@@ -738,17 +801,17 @@ class Ui_MainWindow(QWidget):
         self.img = Image.open('temp/temp.png')
         enhancer = ImageEnhance.Sharpness(self.img)
         self.img = enhancer.enhance(level)
-        self.img.save('temp/temp.png') 
-        self.pixmap = QPixmap('temp/temp.png') 
-        os.remove('temp/temp.png')  
+        self.img.save('temp/temp.png')
+        self.pixmap = QPixmap('temp/temp.png')
+        os.remove('temp/temp.png')
         self.imageBoard.setPixmap(self.pixmap)
-        self.imageBoard.setAlignment(Qt.AlignCenter)       
-        
+        self.imageBoard.setAlignment(Qt.AlignCenter)
+
     # adjust color balance
     def balance(self):
         text, ok = QInputDialog.getText(self, 'Text Input Dialog', 'Enter balance value (0.0 ~ 1.0):')
         if ok:
-            self.balance_core(float(text))       
+            self.balance_core(float(text))
 
     # color balance core function
     def balance_core(self, level):
@@ -756,29 +819,29 @@ class Ui_MainWindow(QWidget):
         self.img = Image.open('temp/temp.png')
         enhancer = ImageEnhance.Color(self.img)
         self.img = enhancer.enhance(level)
-        self.img.save('temp/temp.png') 
-        self.pixmap = QPixmap('temp/temp.png') 
-        os.remove('temp/temp.png')  
+        self.img.save('temp/temp.png')
+        self.pixmap = QPixmap('temp/temp.png')
+        os.remove('temp/temp.png')
         self.imageBoard.setPixmap(self.pixmap)
-        self.imageBoard.setAlignment(Qt.AlignCenter)     
+        self.imageBoard.setAlignment(Qt.AlignCenter)
 
     # resize iamge UI dialog
     def myresize(self):
         text, ok = QInputDialog.getText(self, 'Text Input Dialog', 'Enter a new width (1-512px):')
         if ok:
-            self.myresize_core(float(text))       
+            self.myresize_core(float(text))
 
     # resize core function
     def myresize_core(self, width):
         self.pixmap = self.pixmap.scaledToWidth(width)
         self.imageBoard.setPixmap(self.pixmap)
-        self.imageBoard.setAlignment(Qt.AlignCenter)    
+        self.imageBoard.setAlignment(Qt.AlignCenter)
 
-    # save file UI dialog    
+    # save file UI dialog
     def savefile(self):
         choice = QMessageBox.question(self, 'Cancel', "Save and overwrite the image?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if choice == QMessageBox.Yes:
-            self.save_core()        
+            self.save_core()
 
     # save file core function
     def save_core(self):
@@ -806,6 +869,3 @@ class Ui_MainWindow(QWidget):
         self.imageBoard.setAlignment(Qt.AlignCenter)
         self.isCropOn = False
         QApplication.restoreOverrideCursor()
-
-
-
