@@ -26,7 +26,7 @@ import time
 import threading
 #pip3 install playsound
 #pip3 install -U PyObjC
-from playsound import playsound
+# from playsound import playsound
 
 class programThread(QtCore.QObject):
 
@@ -44,6 +44,23 @@ class programThread(QtCore.QObject):
 
     def myInit(self, path):
         self.pathOfTheAudio = path
+
+from PyQt5.QtWidgets import QLabel
+from PyQt5.QtCore import QObject, pyqtSignal, QEvent
+
+def clickable(widget):      # Making QLabels clickable
+    class Filter(QObject):      # Filtering through only QObjects
+        clicked = pyqtSignal([QLabel])      # Creating signal object and including QLabel object in it
+        def eventFilter(self, obj, event):
+            if obj == widget:
+                if event.type() == QEvent.MouseButtonPress:
+                    if obj.rect().contains(event.pos()):    # If position of click is in the QObjects area
+                        self.clicked.emit(obj)      # Emit Signal
+                        return True   # Clicked object recognizable
+            return False       # Clicked Object blocked by filter
+    filter = Filter(widget)
+    widget.installEventFilter(filter)
+    return filter.clicked
 
 class Ui_MainWindow(QWidget):
 
