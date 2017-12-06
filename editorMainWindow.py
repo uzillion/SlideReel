@@ -22,6 +22,7 @@ from PyQt5.QtCore import QThread
 from programModel import *
 from PIL import ImageFilter, Image, ImageEnhance
 import os, sys, time, threading, sched, requests, urllib.request, shutil
+from social.share import *
 # import pygame
 #pip3 install pygame
 #pip3 install playsound
@@ -149,6 +150,10 @@ class Ui_MainWindow(QWidget):
         self.actionBlur.setObjectName("actionShare_TwitterVid")
         self.actionShare_TwitterImg = QtWidgets.QAction(MainWindow)
         self.actionBlur.setObjectName("actionShare_TwitterImg")
+        self.actionShare_FBVid = QtWidgets.QAction(MainWindow)
+        self.actionBlur.setObjectName("actionShare_FBVid")
+        self.actionShare_FBImg = QtWidgets.QAction(MainWindow)
+        self.actionBlur.setObjectName("actionShare_FBImg")
 
         # Adding action for the item under the File menu
         self.menuFile.addAction(self.actionOpen_Image)
@@ -190,6 +195,8 @@ class Ui_MainWindow(QWidget):
         # Adding action for the item under the Share menu
         self.menuShare.addAction(self.actionShare_TwitterVid)
         self.menuShare.addAction(self.actionShare_TwitterImg)
+        self.menuShare.addAction(self.actionShare_FBVid)
+        self.menuShare.addAction(self.actionShare_FBImg)
 
         # Adding action for the actual menubar
         self.menubar.addAction(self.menuFile.menuAction())
@@ -367,6 +374,8 @@ class Ui_MainWindow(QWidget):
         self.actionBlur.setText(_translate("MainWindow", "Blur..."))
         self.actionShare_TwitterVid.setText(_translate("MainWindow", "Share Video on Twitter"))
         self.actionShare_TwitterImg.setText(_translate("MainWindow", "Share Image on Twitter"))
+        self.actionShare_FBVid.setText(_translate("MainWindow", "Share Video on Facebook"))
+        self.actionShare_FBImg.setText(_translate("MainWindow", "Share Image on Facebook"))
 
     def connectButtons(self):
         # self.treeView.doubleClicked.connect(self.treeFileClicked)            # Action for double-clicking images
@@ -383,6 +392,22 @@ class Ui_MainWindow(QWidget):
         self.actionSharpen.triggered.connect(self.sharpen)                   # Action to sharpen the image
         self.actionOpen_Audio_File.triggered.connect(self.importAudio)       # Action for Open Audio...
         self.actionOpen_Image.triggered.connect(self.importImage)            # Action for Open Image...
+        self.actionShare_TwitterVid.triggered.connect(self.TwitterVid)
+        self.actionShare_TwitterImg.triggered.connect(self.TwitterImg)
+        self.actionShare_FBVid.triggered.connect(self.FBVid)
+        self.actionShare_FBImg.triggered.connect(self.FBImg)
+
+    def TwitterVid(self):
+        pass
+
+    def TwitterImg(self):
+        pass
+
+    def FBVid(self):
+        pass
+
+    def FBImg(self):
+        pass
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
