@@ -231,9 +231,13 @@ class Ui_MainWindow(QWidget):
         self.actionBlur = QtWidgets.QAction(MainWindow)
         self.actionBlur.setObjectName("actionBlur")
         self.actionShare_TwitterVid = QtWidgets.QAction(MainWindow)
-        self.actionBlur.setObjectName("actionShare_TwitterVid")
+        self.actionShare_TwitterVid.setObjectName("actionShare_TwitterVid")
         self.actionShare_TwitterImg = QtWidgets.QAction(MainWindow)
-        self.actionBlur.setObjectName("actionShare_TwitterImg")
+        self.actionShare_TwitterImg.setObjectName("actionShare_TwitterImg")
+        self.actionShare_FacebookVid = QtWidgets.QAction(MainWindow)
+        self.actionShare_FacebookVid.setObjectName("actionShare_FacebookVid")
+        self.actionShare_FacebookImg = QtWidgets.QAction(MainWindow)
+        self.actionShare_FacebookImg.setObjectName("actionShare_FacebookImg")
 
         # Adding action for the item under the File menu
         self.menuFile.addAction(self.actionOpen_Image)
@@ -275,6 +279,8 @@ class Ui_MainWindow(QWidget):
         # Adding action for the item under the Share menu
         self.menuShare.addAction(self.actionShare_TwitterVid)
         self.menuShare.addAction(self.actionShare_TwitterImg)
+        self.menuShare.addAction(self.actionShare_FacebookVid)
+        self.menuShare.addAction(self.actionShare_FacebookImg)
 
         # Adding action for the actual menubar
         self.menubar.addAction(self.menuFile.menuAction())
@@ -463,9 +469,11 @@ class Ui_MainWindow(QWidget):
         self.actionBlur.setText(_translate("MainWindow", "Blur..."))
         self.actionShare_TwitterVid.setText(_translate("MainWindow", "Share Video on Twitter"))
         self.actionShare_TwitterImg.setText(_translate("MainWindow", "Share Image on Twitter"))
+        self.actionShare_FacebookVid.setText(_translate("MainWindow", "Share Video on Facebook"))
+        self.actionShare_FacebookImg.setText(_translate("MainWindow", "Share Image on Facebook"))
 
     def connectButtons(self):
-        # self.treeView.doubleClicked.connect(self.treeFileClicked)            # Action for double-clicking images
+        # self.treeView.doubleClicked.connect(self.treeFileClicked)          # Action for double-clicking images
         self.actionQuit.triggered.connect(self.quitProgram)                  # Action for Quit
         self.playButton.clicked.connect(self.play)                           # Action for Play Button
         # self.playAudioButton.clicked.connect(self.playSound)               # Action for Play Audio Button
@@ -479,6 +487,10 @@ class Ui_MainWindow(QWidget):
         self.actionSharpen.triggered.connect(self.sharpen)                   # Action to sharpen the image
         self.actionOpen_Audio_File.triggered.connect(self.importAudio)       # Action for Open Audio...
         self.actionOpen_Image.triggered.connect(self.importImage)            # Action for Open Image...
+        self.actionShare_TwitterImg.triggered.connect(self.shareTwitterImage)
+        self.actionShare_TwitterVid.triggered.connect(self.shareTwitterVideo)
+        self.actionShare_FacebookImg.triggered.connect(self.shareFacebookImage)
+        self.actionShare_FacebookVid.triggered.connect(self.shareFacebookVideo)
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
@@ -489,7 +501,17 @@ class Ui_MainWindow(QWidget):
     #     model = QFileSystemModel()
     #     model.setRootPath('')
     #     self.treeView.setModel(model)
+    def shareTwitterImage(self):
+        print("The image was shared on Twitter. Yay!")
 
+    def shareTwitterVideo(self):
+        print("The video was shared on Twitter. Yay!")
+
+    def shareFacebookImage(self):
+        print("The image was shared on Facebook. Yay!")
+
+    def shareFacebookVideo(self):
+        print("The video was shared on Facebook. Yay!")
 
     def createPalet(self):
         frame = QtWidgets.QFrame(self.centralwidget)
