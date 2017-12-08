@@ -25,6 +25,7 @@ import os, sys, time, threading, sched, requests, urllib.request, shutil
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import QObject, pyqtSignal, QEvent
 from threading import Timer
+#import audiolab, scipy
 # import pygame
 #pip3 install pygame
 #pip3 install playsound
@@ -315,6 +316,11 @@ class Ui_MainWindow(QWidget):
         self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.playButton.move(745.5, 480)
 
+        self.makeMovieButton = QPushButton(self.centralwidget)
+        self.makeMovieButton.setEnabled(True)
+        self.makeMovieButton.setText("Make Movie")
+        self.makeMovieButton.move(820, 480)
+
         # Creating Start time labels and text boxes for Images
         self.imgStartTimeLabel = QLabel(self.centralwidget)
         self.imgStartTimeLabel.move(120, 485)
@@ -491,6 +497,7 @@ class Ui_MainWindow(QWidget):
         self.actionShare_TwitterVid.triggered.connect(self.shareTwitterVideo)
         self.actionShare_FacebookImg.triggered.connect(self.shareFacebookImage)
         self.actionShare_FacebookVid.triggered.connect(self.shareFacebookVideo)
+        self.makeMovieButton.clicked.connect(self.makeMovie)
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
@@ -512,6 +519,31 @@ class Ui_MainWindow(QWidget):
 
     def shareFacebookVideo(self):
         print("The video was shared on Facebook. Yay!")
+
+    def makeMovie(self):
+        f= open("myVideos.txt","w+")
+        for i in range(2):
+            f.write("file " + "'output" + str(i+1) + ".mp4" + "'" + "\n")
+        f.close()
+        for i in range(2):
+           if i==0:
+               os.system('ffmpeg -loop 1 -f image2 -i img00' + str(i+1) + '.jpg -c:v libx264 -t ' + str(self.prModel.imageEndTimes[0]) + ' output' + str(i+1) + '.mp4')
+               continue;
+           print("Moving to Next images")
+           os.system('ffmpeg -loop 1 -f image2 -i img00' + str(i+1) + '.jpg -c:v libx264 -t ' + str(self.prModel.imageEndTimes[i] - self.prModel.imageStartTimes[i]) + ' output' + str(i+1) + '.mp4')
+        os.system('ffmpeg -f concat -i myVideos.txt -c copy finalVideo.mp4')
+        # Cleaning up created Files
+        for i in range(2):
+            os.remove("output" + str(i+1) + ".mp4")
+        os.remove("myVideos.txt")
+
+        os.system('ffmpeg -i finalVideo.mp4 -i piano-melody.wav -vcodec copy finalOutput.mp4')
+        os.remove("finalVideo.mp4")
+        # Creating one single audio track
+        #a, fs, enc = audiolab.wavread('piano-melody.wav')
+        #b, fs, enc = audiolab.wavread('silence.wav')
+        #c = scipy.vstack((a,b))
+        #audiolab.wavwrite(c, 'file3.wav', fs, enc)
 
     def createPalet(self):
         frame = QtWidgets.QFrame(self.centralwidget)
@@ -735,6 +767,9 @@ class Ui_MainWindow(QWidget):
         endTime = int(self.imgEndTimeBox.text())
         displayLength = endTime - startTime
         imgProp = ((displayLength/60)*985)
+
+        self.prModel.imageStartTimes.append(startTime)
+        self.prModel.imageEndTimes.append(endTime)
 
         self.duration = endTime
 

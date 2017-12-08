@@ -37,3 +37,5 @@ class editorModel:
         self.audioStartTimes = []       # Start times will be stored in this list
         self.audioEndTimes = []         # End times will be stored in this
         self.audioTrackQueue = []       # A queue for audio paths to play in order
+        self.imageStartTimes = []
+        self.imageEndTimes = []
