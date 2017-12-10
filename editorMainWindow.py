@@ -15,16 +15,23 @@ graphical user interface of the application. It is invoked by main.py.
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, QWidget, QPushButton, QLineEdit, QMessageBox, QInputDialog, QStyle, QFileDialog
-from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtGui import QPixmap, QColor, QImage, QPainter
 from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QThread
 from programModel import *
 from PIL import ImageFilter, Image, ImageEnhance
-import os, sys, time, sched, requests, urllib.request, shutil
+import os, sys, time, threading, sched, requests, urllib.request, shutil
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import QObject, pyqtSignal, QEvent
 from threading import Timer
+import cv2
+import numpy as np
+import io
+from PyQt5.QtGui import QImage
+from PyQt5.QtCore import QBuffer
+from subprocess import Popen, PIPE
+#import audiolab, scipy
 # import pygame
 #pip3 install pygame
 #pip3 install playsound
@@ -42,17 +49,67 @@ class audioThread(QtCore.QObject):
     def playSound(self):
         self.sound = QSoundEffect()
         self.sound.setSource(QUrl.fromLocalFile(self.pathOfTheAudio))
+        print("This is a test from audioThread")
         self.sound.setLoopCount(1)
         self.sound.play()
-        # while True:
-        #     if self.sound.status() == 0:
-        #         print("status: 0")
-        #         parent.myThread.terminate()
-        #         self.terminate()
-
+        print("This is a test from audioThread")
 
     def myInit(self, path):
         self.pathOfTheAudio = path
+
+class audioHandlingThread(QtCore.QObject):
+
+    newData  = QtCore.pyqtSignal(object)
+
+    def __init__(self, parent=None, *args, **kw):
+        QtCore.QObject.__init__(self)
+        self.myInit(*args, **kw)
+
+    def playAudioTracks(self):
+        for i in range(len(self.startTimes)):
+            if i==0:
+                self.thread1 = QtCore.QThread()
+                self.smp = audioThread(self, self.audioQueue[i])
+                self.smp.moveToThread(self.thread1)
+                self.thread1.started.connect(self.smp.playSound)
+                self.thread1.start()
+                #time.sleep(self.prModel.audioEndTimes[0])
+                time.sleep(self.endTimes[i] - self.startTimes[i])
+                self.thread1.terminate()
+            else:
+                timeDifference = self.startTimes[i] - self.endTimes[i-1]
+                cwd = os.getcwd()
+                silentSoundPath = cwd + "/" + "silence.wav"
+                self.thread2 = QtCore.QThread()
+                self.smp = audioThread(self, silentSoundPath)
+                self.smp.moveToThread(self.thread2)
+                self.thread2.started.connect(self.smp.playSound)
+                self.thread2.start()
+                time.sleep(timeDifference)
+                #t1 = Timer(timeDifference, self.endThread2)
+                #t1.start()
+                self.thread2.terminate()
+                self.thread1 = QtCore.QThread()
+                self.smp = audioThread(self, self.audioQueue[i])
+                self.smp.moveToThread(self.thread1)
+                self.thread1.started.connect(self.smp.playSound)
+                self.thread1.start()
+                time.sleep(self.endTimes[i] - self.startTimes[i])
+                self.thread1.terminate()
+
+    def playSound(self):
+        self.sound = QSoundEffect()
+        self.sound.setSource(QUrl.fromLocalFile(self.pathOfTheAudio))
+        print("This is a test from audioThread")
+        self.sound.setLoopCount(1)
+        self.sound.play()
+        print("This is a test from audioThread")
+
+    def myInit(self, path, strtList, endList, queue):
+        self.pathOfTheAudio = path
+        self.startTimes = strtList
+        self.endTimes = endList
+        self.audioQueue = queue
 
 class imageThread(QtCore.QObject):
     data = QtCore.pyqtSignal(object)
@@ -64,34 +121,53 @@ class imageThread(QtCore.QObject):
     def playSlides(me, self):
         c=0
         for remaining in range(0, self.duration+1, 1):
-            # sys.stdout.write("\r")
-            # sys.stdout.write("{:2d}".format(remaining))
-            # sys.stdout.flush()
             self.horizontalSlider.setValue(remaining)
             print(remaining)
             if remaining in self.prModel.durations or remaining == 0:
-                self.playView(c)
+                if remaining != 0 and remaining != self.duration and self.transition == 1:
+                    for transition in range(255, -1, -5):
+                        temp = self.imageBoard.pixmap().toImage()
+                        p = QPainter()
+                        p.begin(temp)
+                        p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+                        p.fillRect(temp.rect(), QColor(0, 0, 0, transition))
+                        p.end()
+                        self.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        self.imageBoard.repaint()
+                        time.sleep(1/24)
+
+                    self.img = QPixmap(self.prModel.labelList[c])
+                    self.img = self.scaleImage(self.img)
+
+                    for transition in range(0, 256, 5):
+                        temp = self.img.toImage()
+                        p = QPainter()
+                        p.begin(temp)
+                        p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+                        p.fillRect(temp.rect(), QColor(0, 0, 0, transition))
+                        p.end()
+                        self.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        self.imageBoard.repaint()
+                        time.sleep(1/24)
+                    # for transition in range(110, -1, -1):
+                    #     self.mask.raise_()
+                    #     maskStyle = "background-color: rgba(0, 0, 0, "+ str(transition/100) +")"
+                    #     self.mask.setStyleSheet(maskStyle)
+                    #     # print(self.mask.styleSheet())
+                    #     self.mask.repaint()
+                    #     time.sleep(1/30)
+                else:
+                    self.playView(c)
                 c += 1
             self.horizontalSlider.repaint()
             time.sleep(1)
+            print("This is a test from imageThread")
+
         self.isPlaying = 0
         self.horizontalSlider.setValue(0)
         self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.playView(0)
         self.playButton.setEnabled(True)
-
-class SleepThread(QtCore.QObject):
-    data = QtCore.pyqtSignal(object)
-    def __init__(self, parent=None, *args, **kw):
-        QtCore.QObject.__init__(self)
-
-        # self.myInit(*args, **kw)
-
-    def watch(self, parent):
-        s = sched.scheduler(time.time, time.sleep)
-        print("Entered watch")
-        s.enter(5, 1, parent.terminateThrd)
-        s.run()
 
 
 def clickable(widget):      # Making QLabels clickable
@@ -116,8 +192,27 @@ class Ui_MainWindow(QWidget):
         self.prModel = editorModel()
         self.duration = 0
         self.isPlaying = 0
-        self.s = sched.scheduler(time.time, time.sleep)
+        self.transition = 1
         # self.searchedImages = []
+
+    def convertToImage(self, pixmap):
+        img = pixmap.toImage()
+        buffer = QBuffer()
+        buffer.open(QBuffer.ReadWrite)
+        img.save(buffer, "PNG")
+        pil_im = Image.open(io.BytesIO(buffer.data()))
+        return pil_im
+
+    def writeToFrame(self):
+        self.play()
+        fps, duration = 24, self.duration
+        p = Popen(['ffmpeg', '-y', '-f', 'image2pipe', '-vcodec', 'mjpeg', '-r', '24', '-i', '-', '-vcodec', 'mpeg4', '-qscale', '5', '-r', '24', 'video.avi'], stdin=PIPE)
+
+        for i in range(fps * self.duration):
+            img = self.convertToImage(self.imageBoard.pixmap())
+            img.save(p.stdin, 'JPEG')
+        p.stdin.close()
+        p.wait()
 
 
     def setupUi(self, MainWindow):
@@ -193,9 +288,13 @@ class Ui_MainWindow(QWidget):
         self.actionBlur = QtWidgets.QAction(MainWindow)
         self.actionBlur.setObjectName("actionBlur")
         self.actionShare_TwitterVid = QtWidgets.QAction(MainWindow)
-        self.actionBlur.setObjectName("actionShare_TwitterVid")
+        self.actionShare_TwitterVid.setObjectName("actionShare_TwitterVid")
         self.actionShare_TwitterImg = QtWidgets.QAction(MainWindow)
-        self.actionBlur.setObjectName("actionShare_TwitterImg")
+        self.actionShare_TwitterImg.setObjectName("actionShare_TwitterImg")
+        self.actionShare_FacebookVid = QtWidgets.QAction(MainWindow)
+        self.actionShare_FacebookVid.setObjectName("actionShare_FacebookVid")
+        self.actionShare_FacebookImg = QtWidgets.QAction(MainWindow)
+        self.actionShare_FacebookImg.setObjectName("actionShare_FacebookImg")
 
         # Adding action for the item under the File menu
         self.menuFile.addAction(self.actionOpen_Image)
@@ -237,6 +336,8 @@ class Ui_MainWindow(QWidget):
         # Adding action for the item under the Share menu
         self.menuShare.addAction(self.actionShare_TwitterVid)
         self.menuShare.addAction(self.actionShare_TwitterImg)
+        self.menuShare.addAction(self.actionShare_FacebookVid)
+        self.menuShare.addAction(self.actionShare_FacebookImg)
 
         # Adding action for the actual menubar
         self.menubar.addAction(self.menuFile.menuAction())
@@ -270,6 +371,11 @@ class Ui_MainWindow(QWidget):
         self.playButton.setEnabled(True)
         self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.playButton.move(745.5, 480)
+
+        self.makeMovieButton = QPushButton(self.centralwidget)
+        self.makeMovieButton.setEnabled(True)
+        self.makeMovieButton.setText("Make Movie")
+        self.makeMovieButton.move(820, 480)
 
         # Creating Start time labels and text boxes for Images
         self.imgStartTimeLabel = QLabel(self.centralwidget)
@@ -324,6 +430,10 @@ class Ui_MainWindow(QWidget):
         self.endpos = [0, 0]
         self.isCropOn = False
 
+    def doStuff(self):
+        #self.myThread.terminate()
+        self.thread1.terminate()
+
     def play(self):
         # Stores the checkpoints at which image needs to change in imageboard
         changeList = []
@@ -332,10 +442,9 @@ class Ui_MainWindow(QWidget):
         changeList.append(0)
         total = 0
         c = 0
-
-
-
-
+        print("From main, before Handle")
+        # self.handleAudio()
+        print("From main, after Handle")
         # self.sound = QSoundEffect()
         # self.sound.setSource(QUrl.fromLocalFile("piano-melody.wav"))
         # self.sound.setLoopCount(1)
@@ -348,47 +457,44 @@ class Ui_MainWindow(QWidget):
         self.playButton.setEnabled(False)
         self.isPlaying = 1
 
-        print(self.prModel.labelList)
-        print(self.prModel.durations)
-        print(self.prModel.durationLabels)
+        self.myThread = QtCore.QThread()
+        self.task = imageThread(self)
+        self.task.moveToThread(self.myThread)
+        self.myThread.started.connect(lambda: self.task.playSlides(self))
+        self.myThread.start()
+        print("From main, after imgThread")
+        #t = Timer(5, self.doStuff)
+        #t.start() # after 30 seconds, "hello, world" will be printed
+        #time.sleep(5)
+        #self.thread1.terminate()
+        #self.myThread.terminate()
 
-        # self.myThread = QtCore.QThread()
-        # self.task = imageThread(self)
-        # self.task.moveToThread(self.myThread)
-        # self.myThread.started.connect(lambda: self.task.playSlides(self))
-        # self.myThread.start()
-        self.handleAudio()
 
-        # self.s.enter(5, 1, self.terminateThrd)
-        # self.s.run()
-        # self.sleepThread = QtCore.QThread()
-        # self.watchTask = SleepThread(self)
-        # self.watchTask.moveToThread(self.sleepThread)
-        # self.sleepThread.started.connect(lambda: self.watchTask.watch(self))
-        # self.sleepThread.start()
-        t = Timer(5, self.terminateThrd)
-        t.start()
+        # Storing the checkpoints
+        # for durations in self.prModel.durations:
+        #     changeList.append(total + durations)
+        #     total = changeList[len(changeList)-1]
+        # changeList.pop()
 
-        c=0
-        for remaining in range(0, self.duration+1, 1):
-            # sys.stdout.write("\r")
-            # sys.stdout.write("{:2d}".format(remaining))
-            # sys.stdout.flush()
-            self.horizontalSlider.setValue(remaining)
-            print(remaining)
-            if remaining in self.prModel.durations or remaining == 0:
-                self.playView(c)
-                c += 1
-            self.horizontalSlider.repaint()
-            time.sleep(1)
-
-        self.terminateThrd()
-
-        self.isPlaying = 0
-        self.horizontalSlider.setValue(0)
-        self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        self.playView(0)
-        self.playButton.setEnabled(True)
+        # Moving slider
+        # for remaining in range(0, self.duration+1, 1):
+        #     # sys.stdout.write("\r")
+        #     # sys.stdout.write("{:2d}".format(remaining))
+        #     # sys.stdout.flush()
+        #     self.horizontalSlider.setValue(remaining)
+        #     print(remaining)
+        #     if remaining in self.prModel.durations or remaining == 0:
+        #         self.playView(c)
+        #         c += 1
+        #     self.horizontalSlider.repaint()
+        #     time.sleep(1)
+        #
+        #
+        # self.isPlaying = 0
+        # self.horizontalSlider.setValue(0)
+        # self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        # self.playView(0)
+        # self.playButton.setEnabled(True)
 
 
 
@@ -466,9 +572,11 @@ class Ui_MainWindow(QWidget):
         self.actionBlur.setText(_translate("MainWindow", "Blur..."))
         self.actionShare_TwitterVid.setText(_translate("MainWindow", "Share Video on Twitter"))
         self.actionShare_TwitterImg.setText(_translate("MainWindow", "Share Image on Twitter"))
+        self.actionShare_FacebookVid.setText(_translate("MainWindow", "Share Video on Facebook"))
+        self.actionShare_FacebookImg.setText(_translate("MainWindow", "Share Image on Facebook"))
 
     def connectButtons(self):
-        # self.treeView.doubleClicked.connect(self.treeFileClicked)            # Action for double-clicking images
+        # self.treeView.doubleClicked.connect(self.treeFileClicked)          # Action for double-clicking images
         self.actionQuit.triggered.connect(self.quitProgram)                  # Action for Quit
         self.playButton.clicked.connect(self.play)                           # Action for Play Button
         # self.playAudioButton.clicked.connect(self.playSound)               # Action for Play Audio Button
@@ -482,6 +590,11 @@ class Ui_MainWindow(QWidget):
         self.actionSharpen.triggered.connect(self.sharpen)                   # Action to sharpen the image
         self.actionOpen_Audio_File.triggered.connect(self.importAudio)       # Action for Open Audio...
         self.actionOpen_Image.triggered.connect(self.importImage)            # Action for Open Image...
+        self.actionShare_TwitterImg.triggered.connect(self.shareTwitterImage)
+        self.actionShare_TwitterVid.triggered.connect(self.shareTwitterVideo)
+        self.actionShare_FacebookImg.triggered.connect(self.shareFacebookImage)
+        self.actionShare_FacebookVid.triggered.connect(self.shareFacebookVideo)
+        self.makeMovieButton.clicked.connect(self.writeToFrame)
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
@@ -492,7 +605,46 @@ class Ui_MainWindow(QWidget):
     #     model = QFileSystemModel()
     #     model.setRootPath('')
     #     self.treeView.setModel(model)
+    def shareTwitterImage(self):
+        print("The image was shared on Twitter. Yay!")
 
+    def shareTwitterVideo(self):
+        print("The video was shared on Twitter. Yay!")
+
+    def shareFacebookImage(self):
+        print("The image was shared on Facebook. Yay!")
+
+    def shareFacebookVideo(self):
+        print("The video was shared on Facebook. Yay!")
+
+    def makeMovie(self):
+        self.writeToFrame()
+        #######################
+        # f= open("myVideos.txt","w+")
+        # for i in range(2):
+        #     f.write("file " + "'output" + str(i+1) + ".mp4" + "'" + "\n")
+        # f.close()
+        # for i in range(2):
+        #    if i==0:
+        #        os.system('ffmpeg -loop 1 -f image2 -i img00' + str(i+1) + '.jpg -c:v libx264 -t ' + str(self.prModel.imageEndTimes[0]) + ' output' + str(i+1) + '.mp4')
+        #        continue;
+        #    print("Moving to Next images")
+        #    os.system('ffmpeg -loop 1 -f image2 -i img00' + str(i+1) + '.jpg -c:v libx264 -t ' + str(self.prModel.imageEndTimes[i] - self.prModel.imageStartTimes[i]) + ' output' + str(i+1) + '.mp4')
+        # os.system('ffmpeg -f concat -i myVideos.txt -c copy finalVideo.mp4')
+        # # Cleaning up created Files
+        # for i in range(2):
+        #     os.remove("output" + str(i+1) + ".mp4")
+        # os.remove("myVideos.txt")
+        #
+        # os.system('ffmpeg -i finalVideo.mp4 -i piano-melody.wav -vcodec copy finalOutput.mp4')
+        # os.remove("finalVideo.mp4")
+        ######################################
+
+        # Creating one single audio track
+        #a, fs, enc = audiolab.wavread('piano-melody.wav')
+        #b, fs, enc = audiolab.wavread('silence.wav')
+        #c = scipy.vstack((a,b))
+        #audiolab.wavwrite(c, 'file3.wav', fs, enc)
 
     def createPalet(self):
         frame = QtWidgets.QFrame(self.centralwidget)
@@ -566,6 +718,17 @@ class Ui_MainWindow(QWidget):
     # We create the board using a QLabel once, and then we keep updating it
     # using other functions.
     def createBoard(self):
+        # self.mask = QLabel(self.centralwidget)
+        # self.mask.setGeometry(QtCore.QRect(480, 7, 531, 465))
+        # img = QImage("img001.jpg")
+        # p = QPainter()
+        # p.begin(img)
+        # p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+        # p.fillRect(img.rect(), QColor(0, 0, 0, 255))
+        # p.end()
+        # self.mask.setPixmap(QPixmap.fromImage(img))
+        # self.mask.setAlignment(Qt.AlignCenter)
+
         self.imageBoard = QLabel(self.centralwidget)
         self.imageBoard.setStyleSheet('border: 5px solid grey')
         self.imageBoard.setGeometry(QtCore.QRect(480, 7, 531, 465))
@@ -717,6 +880,9 @@ class Ui_MainWindow(QWidget):
         displayLength = endTime - startTime
         imgProp = ((displayLength/60)*985)
 
+        self.prModel.imageStartTimes.append(startTime)
+        self.prModel.imageEndTimes.append(endTime)
+
         self.duration = endTime
 
         if self.prModel.timelineIsEmpty == 1:
@@ -841,38 +1007,18 @@ class Ui_MainWindow(QWidget):
             self.myAudio.setVisible(1)
             self.prModel.thumbnailLengthTracker += imgProp
 
+    def endThread2(self):
+        self.thread2.terminate()
 
+    def endThread1(self):
+        self.thread1.terminate()
 
     def handleAudio(self):
-        for i in range(len(self.prModel.audioStartTimes)):
-            if i==0:
-                self.thread1 = QtCore.QThread()
-                self.smp = audioThread(self, self.prModel.audioTrackQueue[i])
-                self.smp.moveToThread(self.thread1)
-                self.thread1.started.connect(self.smp.playSound)
-                self.thread1.start()
-                # time.sleep(self.prModel.audioEndTimes[i] - self.prModel.audioStartTimes[i])
-                # self.thread1.terminate()
-            else:
-                timeDifference = self.prModel.audioStartTimes[i] - self.prModel.audioEndTimes[i-1]
-                cwd = os.getcwd()
-                silentSoundPath = cwd + "/" + "silence.wav"
-                self.thread2 = QtCore.QThread()
-                self.smp = audioThread(self, silentSoundPath)
-                self.smp.moveToThread(self.thread2)
-                self.thread2.started.connect(self.smp.playSound)
-                self.thread2.start()
-                time.sleep(timeDifference)
-                self.thread2.terminate()
-                self.thread1 = QtCore.QThread()
-                self.smp = audioThread(self, self.prModel.audioTrackQueue[i])
-                self.smp.moveToThread(self.thread1)
-                self.thread1.started.connect(self.smp.playSound)
-                self.thread1.start()
-                # time.sleep(self.prModel.audioEndTimes[i] - self.prModel.audioStartTimes[i])
-                # self.thread1.terminate()
-
-
+        self.testThread = QtCore.QThread()
+        self.a1 = audioHandlingThread(self, self.audioPath, self.prModel.audioStartTimes, self.prModel.audioEndTimes, self.prModel.audioTrackQueue )
+        self.a1.moveToThread(self.testThread)
+        self.testThread.started.connect(self.a1.playAudioTracks)
+        self.testThread.start()
 
     def importImage(self):
         options = QFileDialog.Options()
