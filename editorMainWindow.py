@@ -25,6 +25,7 @@ import os, sys, time, threading, sched, requests, urllib.request, shutil
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import QObject, pyqtSignal, QEvent
 from threading import Timer
+import cv2
 #import audiolab, scipy
 # import pygame
 #pip3 install pygame
@@ -115,12 +116,24 @@ class imageThread(QtCore.QObject):
     def playSlides(me, self):
         c=0
         for remaining in range(0, self.duration+1, 1):
-            # sys.stdout.write("\r")
-            # sys.stdout.write("{:2d}".format(remaining))
-            # sys.stdout.flush()
             self.horizontalSlider.setValue(remaining)
             print(remaining)
             if remaining in self.prModel.durations or remaining == 0:
+                if remaining != 0 or remaining != self.duration:
+                    for transition in range(0, 110):
+                        self.mask.raise_()
+                        maskStyle = "background-color: rgba(0, 0, 0, "+ str(transition/100) +")"
+                        self.mask.setStyleSheet(maskStyle)
+                        print(self.mask.styleSheet())
+                        self.mask.repaint()
+                        time.sleep(1/30)
+                    for transition in range(110, -1, -1):
+                        self.mask.raise_()
+                        maskStyle = "background-color: rgba(0, 0, 0, "+ str(transition/100) +")"
+                        self.mask.setStyleSheet(maskStyle)
+                        print(self.mask.styleSheet())
+                        self.mask.repaint()
+                        time.sleep(1/30)
                 self.playView(c)
                 c += 1
             self.horizontalSlider.repaint()
@@ -157,6 +170,12 @@ class Ui_MainWindow(QWidget):
         self.duration = 0
         self.isPlaying = 0
         # self.searchedImages = []
+
+
+    def writeToFrame(self, pixmap):
+        originalpixmap = QPixmap()
+        qimg = originalpixmap.toImage()
+        frame = cv2.Mat
 
 
     def setupUi(self, MainWindow):
@@ -617,6 +636,10 @@ class Ui_MainWindow(QWidget):
     # We create the board using a QLabel once, and then we keep updating it
     # using other functions.
     def createBoard(self):
+        self.mask = QLabel(self.centralwidget)
+        self.mask.setGeometry(QtCore.QRect(480, 7, 531, 465))
+        self.mask.setStyleSheet("background-color: rgba(0, 0, 0, 0)")
+
         self.imageBoard = QLabel(self.centralwidget)
         self.imageBoard.setStyleSheet('border: 5px solid grey')
         self.imageBoard.setGeometry(QtCore.QRect(480, 7, 531, 465))
