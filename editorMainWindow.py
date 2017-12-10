@@ -15,7 +15,7 @@ graphical user interface of the application. It is invoked by main.py.
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, QWidget, QPushButton, QLineEdit, QMessageBox, QInputDialog, QStyle, QFileDialog
-from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtGui import QPixmap, QColor, QImage, QPainter
 from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QThread
@@ -26,6 +26,11 @@ from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import QObject, pyqtSignal, QEvent
 from threading import Timer
 import cv2
+import numpy as np
+import io
+from PyQt5.QtGui import QImage
+from PyQt5.QtCore import QBuffer
+from subprocess import Popen, PIPE
 #import audiolab, scipy
 # import pygame
 #pip3 install pygame
@@ -119,22 +124,38 @@ class imageThread(QtCore.QObject):
             self.horizontalSlider.setValue(remaining)
             print(remaining)
             if remaining in self.prModel.durations or remaining == 0:
-                if remaining != 0 or remaining != self.duration:
-                    for transition in range(0, 110):
-                        self.mask.raise_()
-                        maskStyle = "background-color: rgba(0, 0, 0, "+ str(transition/100) +")"
-                        self.mask.setStyleSheet(maskStyle)
-                        print(self.mask.styleSheet())
-                        self.mask.repaint()
-                        time.sleep(1/30)
-                    for transition in range(110, -1, -1):
-                        self.mask.raise_()
-                        maskStyle = "background-color: rgba(0, 0, 0, "+ str(transition/100) +")"
-                        self.mask.setStyleSheet(maskStyle)
-                        print(self.mask.styleSheet())
-                        self.mask.repaint()
-                        time.sleep(1/30)
-                self.playView(c)
+                if remaining != 0 and remaining != self.duration and self.transition == 1:
+                    for transition in range(255, -1, -5):
+                        temp = self.imageBoard.pixmap().toImage()
+                        p = QPainter()
+                        p.begin(temp)
+                        p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+                        p.fillRect(temp.rect(), QColor(0, 0, 0, transition))
+                        p.end()
+                        self.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        self.imageBoard.repaint()
+                        time.sleep(1/24)
+
+                    self.img = QPixmap(self.prModel.labelList[c])
+                    self.img = self.scaleImage(self.img)
+
+                    for transition in range(0, 256, 5):
+                        temp = self.img.toImage()
+                        p = QPainter()
+                        p.begin(temp)
+                        p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+                        p.fillRect(temp.rect(), QColor(0, 0, 0, transition))
+                        p.end()
+                        self.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        self.imageBoard.repaint()
+                        time.sleep(1/24)
+                    # for transition in range(110, -1, -1):
+                    #     self.mask.raise_()
+                    #     maskStyle = "background-color: rgba(0, 0, 0, "+ str(transition/100) +")"
+                    #     self.mask.setStyleSheet(maskStyle)
+                    #     # print(self.mask.styleSheet())
+                    #     self.mask.repaint()
+                    #     time.sleep(1/30)
                 c += 1
             self.horizontalSlider.repaint()
             time.sleep(1)
@@ -169,13 +190,27 @@ class Ui_MainWindow(QWidget):
         self.prModel = editorModel()
         self.duration = 0
         self.isPlaying = 0
+        self.transition = 1
         # self.searchedImages = []
 
+    def convertToImage(self, pixmap):
+        img = pixmap.toImage()
+        buffer = QBuffer()
+        buffer.open(QBuffer.ReadWrite)
+        img.save(buffer, "PNG")
+        pil_im = Image.open(io.BytesIO(buffer.data()))
+        return pil_im
 
-    def writeToFrame(self, pixmap):
-        originalpixmap = QPixmap()
-        qimg = originalpixmap.toImage()
-        frame = cv2.Mat
+    def writeToFrame(self):
+        self.play()
+        fps, duration = 24, self.duration
+        p = Popen(['ffmpeg', '-y', '-f', 'image2pipe', '-vcodec', 'mjpeg', '-r', '24', '-i', '-', '-vcodec', 'mpeg4', '-qscale', '5', '-r', '24', 'video.avi'], stdin=PIPE)
+
+        for i in range(fps * self.duration):
+            img = self.convertToImage(self.imageBoard.pixmap())
+            img.save(p.stdin, 'JPEG')
+        p.stdin.close()
+        p.wait()
 
 
     def setupUi(self, MainWindow):
@@ -406,7 +441,7 @@ class Ui_MainWindow(QWidget):
         total = 0
         c = 0
         print("From main, before Handle")
-        self.handleAudio()
+        # self.handleAudio()
         print("From main, after Handle")
         # self.sound = QSoundEffect()
         # self.sound.setSource(QUrl.fromLocalFile("piano-melody.wav"))
@@ -516,7 +551,7 @@ class Ui_MainWindow(QWidget):
         self.actionShare_TwitterVid.triggered.connect(self.shareTwitterVideo)
         self.actionShare_FacebookImg.triggered.connect(self.shareFacebookImage)
         self.actionShare_FacebookVid.triggered.connect(self.shareFacebookVideo)
-        self.makeMovieButton.clicked.connect(self.makeMovie)
+        self.makeMovieButton.clicked.connect(self.writeToFrame)
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
@@ -540,24 +575,28 @@ class Ui_MainWindow(QWidget):
         print("The video was shared on Facebook. Yay!")
 
     def makeMovie(self):
-        f= open("myVideos.txt","w+")
-        for i in range(2):
-            f.write("file " + "'output" + str(i+1) + ".mp4" + "'" + "\n")
-        f.close()
-        for i in range(2):
-           if i==0:
-               os.system('ffmpeg -loop 1 -f image2 -i img00' + str(i+1) + '.jpg -c:v libx264 -t ' + str(self.prModel.imageEndTimes[0]) + ' output' + str(i+1) + '.mp4')
-               continue;
-           print("Moving to Next images")
-           os.system('ffmpeg -loop 1 -f image2 -i img00' + str(i+1) + '.jpg -c:v libx264 -t ' + str(self.prModel.imageEndTimes[i] - self.prModel.imageStartTimes[i]) + ' output' + str(i+1) + '.mp4')
-        os.system('ffmpeg -f concat -i myVideos.txt -c copy finalVideo.mp4')
-        # Cleaning up created Files
-        for i in range(2):
-            os.remove("output" + str(i+1) + ".mp4")
-        os.remove("myVideos.txt")
+        self.writeToFrame()
+        #######################
+        # f= open("myVideos.txt","w+")
+        # for i in range(2):
+        #     f.write("file " + "'output" + str(i+1) + ".mp4" + "'" + "\n")
+        # f.close()
+        # for i in range(2):
+        #    if i==0:
+        #        os.system('ffmpeg -loop 1 -f image2 -i img00' + str(i+1) + '.jpg -c:v libx264 -t ' + str(self.prModel.imageEndTimes[0]) + ' output' + str(i+1) + '.mp4')
+        #        continue;
+        #    print("Moving to Next images")
+        #    os.system('ffmpeg -loop 1 -f image2 -i img00' + str(i+1) + '.jpg -c:v libx264 -t ' + str(self.prModel.imageEndTimes[i] - self.prModel.imageStartTimes[i]) + ' output' + str(i+1) + '.mp4')
+        # os.system('ffmpeg -f concat -i myVideos.txt -c copy finalVideo.mp4')
+        # # Cleaning up created Files
+        # for i in range(2):
+        #     os.remove("output" + str(i+1) + ".mp4")
+        # os.remove("myVideos.txt")
+        #
+        # os.system('ffmpeg -i finalVideo.mp4 -i piano-melody.wav -vcodec copy finalOutput.mp4')
+        # os.remove("finalVideo.mp4")
+        ######################################
 
-        os.system('ffmpeg -i finalVideo.mp4 -i piano-melody.wav -vcodec copy finalOutput.mp4')
-        os.remove("finalVideo.mp4")
         # Creating one single audio track
         #a, fs, enc = audiolab.wavread('piano-melody.wav')
         #b, fs, enc = audiolab.wavread('silence.wav')
@@ -636,9 +675,16 @@ class Ui_MainWindow(QWidget):
     # We create the board using a QLabel once, and then we keep updating it
     # using other functions.
     def createBoard(self):
-        self.mask = QLabel(self.centralwidget)
-        self.mask.setGeometry(QtCore.QRect(480, 7, 531, 465))
-        self.mask.setStyleSheet("background-color: rgba(0, 0, 0, 0)")
+        # self.mask = QLabel(self.centralwidget)
+        # self.mask.setGeometry(QtCore.QRect(480, 7, 531, 465))
+        # img = QImage("img001.jpg")
+        # p = QPainter()
+        # p.begin(img)
+        # p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+        # p.fillRect(img.rect(), QColor(0, 0, 0, 255))
+        # p.end()
+        # self.mask.setPixmap(QPixmap.fromImage(img))
+        # self.mask.setAlignment(Qt.AlignCenter)
 
         self.imageBoard = QLabel(self.centralwidget)
         self.imageBoard.setStyleSheet('border: 5px solid grey')
