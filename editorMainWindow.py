@@ -14,8 +14,8 @@ graphical user interface of the application. It is invoked by main.py.
 """
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, QWidget, QPushButton, QLineEdit, QMessageBox, QInputDialog, QStyle, QFileDialog
-from PyQt5.QtGui import QPixmap, QColor, QImage, QPainter
+from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, QWidget, QPushButton, QLineEdit, QMessageBox, QInputDialog, QStyle, QFileDialog, QComboBox
+from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QThread
@@ -354,13 +354,15 @@ class Ui_MainWindow(QWidget):
         # This button is responsible to add images to the timeline
         self.addButton = QPushButton(self.centralwidget)
         self.addButton.setText("Add Image")
-        self.addButton.move(20, 480)
+        self.addButton.setGeometry(QtCore.QRect(17, 480, 100, 22))
+        self.addButton.setStyleSheet("border-radius: 5; border: 2px solid blue; border-color: #ec8722")
 
         # Creating the add_audio button.
         # This button is responsible to add images to the timeline
         self.addAudioButton = QPushButton(self.centralwidget)
         self.addAudioButton.setText("Add Audio")
-        self.addAudioButton.move(20, 705)
+        self.addAudioButton.setGeometry(QtCore.QRect(17, 713, 100, 22))
+        self.addAudioButton.setStyleSheet("border-radius: 5; border: 2px solid blue; border-color: #ec8722")
 
         # Creating the play button.
         # When the user clicks on this button, all the images with their
@@ -368,40 +370,48 @@ class Ui_MainWindow(QWidget):
         self.playButton = QPushButton(self.centralwidget)
         self.playButton.setEnabled(True)
         self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        self.playButton.move(745.5, 480)
+        self.playButton.setGeometry(QtCore.QRect(823, 480, 50, 22))
+        self.playButton.setStyleSheet("border-radius: 5; border: 2px solid blue; border-color: #ec8722")
+        #self.playButton.move(745.5, 480)
 
         self.makeMovieButton = QPushButton(self.centralwidget)
         self.makeMovieButton.setEnabled(True)
-        self.makeMovieButton.setText("Make Movie")
-        self.makeMovieButton.move(820, 480)
+        self.makeMovieButton.setText("Render Video")
+        self.makeMovieButton.setGeometry(QtCore.QRect(880, 480, 130, 22))
+        self.makeMovieButton.setStyleSheet("border-radius: 5; border: 2px solid blue; border-color: #ec8722")
+        #self.makeMovieButton.move(820, 480)
 
         # Creating Start time labels and text boxes for Images
         self.imgStartTimeLabel = QLabel(self.centralwidget)
-        self.imgStartTimeLabel.move(120, 485)
+        self.imgStartTimeLabel.move(150, 483)
         self.imgStartTimeLabel.setText("Start time:")
         self.imgStartTimeBox = QLineEdit(self.centralwidget)
-        self.imgStartTimeBox.setGeometry(QtCore.QRect(190, 485, 50, 20))
+        self.imgStartTimeBox.setGeometry(QtCore.QRect(220, 480, 50, 24))
+        self.imgStartTimeBox.setStyleSheet("border-radius: 5; border: 2px solid blue; border-color: #2a84e5")
 
         # Creating End time labels and text boxes for Images
         self.imgEndTimeLabel = QLabel(self.centralwidget)
-        self.imgEndTimeLabel.move(250, 485)
+        self.imgEndTimeLabel.move(280, 483)
         self.imgEndTimeLabel.setText("End time:")
         self.imgEndTimeBox = QLineEdit(self.centralwidget)
-        self.imgEndTimeBox.setGeometry(QtCore.QRect(310, 485, 50, 20))
+        self.imgEndTimeBox.setGeometry(QtCore.QRect(340, 480, 50, 24))
+        self.imgEndTimeBox.setStyleSheet("border-radius: 5; border: 2px solid blue; border-color: #2a84e5")
 
         # Creating Start time labels and text boxes for audio files
         self.audioStartTimeLabel = QLabel(self.centralwidget)
-        self.audioStartTimeLabel.move(120, 709)
+        self.audioStartTimeLabel.move(150, 719)
         self.audioStartTimeLabel.setText("Start time:")
         self.audioStartTimeBox = QLineEdit(self.centralwidget)
-        self.audioStartTimeBox.setGeometry(QtCore.QRect(190, 709, 50, 20))
+        self.audioStartTimeBox.setGeometry(QtCore.QRect(220, 715, 50, 24))
+        self.audioStartTimeBox.setStyleSheet("border-radius: 5; border: 2px solid blue; border-color: #2a84e5")
 
         # Creating End time labels and text boxes for audio files
         self.audioEndTimeLabel = QLabel(self.centralwidget)
-        self.audioEndTimeLabel.move(250, 709)
+        self.audioEndTimeLabel.move(280, 719)
         self.audioEndTimeLabel.setText("End time:")
         self.audioEndTimeBox = QLineEdit(self.centralwidget)
-        self.audioEndTimeBox.setGeometry(QtCore.QRect(310, 709, 50, 20))
+        self.audioEndTimeBox.setGeometry(QtCore.QRect(340, 715, 50, 24))
+        self.audioEndTimeBox.setStyleSheet("border-radius: 5; border: 2px solid blue; border-color: #2a84e5")
 
         # This is the Total Time label.
         # We need to show the total time of the slideshow using this label.
@@ -413,12 +423,22 @@ class Ui_MainWindow(QWidget):
         self.durationLabel.setText("0")
         self.durationLabel.setFixedWidth(20)
 
+        # This is our comboBox for switching views.
+        # There are two options: Tree-View and Thumbnail-View
+        self.myCombo = QComboBox(self.centralwidget)
+        self.myCombo.addItem("Tree-view Mode (Local)")
+        self.myCombo.addItem("Thumbnail-view Mode (Online)")
+        self.myCombo.setStyleSheet("border-radius: 2; border: 2px solid blue; border-color: #2a84e5")
+        self.myCombo.move(490, 480)
+        self.myCombo.setGeometry(QtCore.QRect(480, 480, 250, 24))
+        self.myCombo.activated[str].connect(self.comboBoxMethod)
+
         self.createTimeline()
         self.createAudioTimeline()
         self.createSlider()
         self.myImage = QLabel(self.centralwidget)
         self.myAudio = QLabel(self.centralwidget)
-        # self.createTreeView()
+        self.createTreeView()
         self.createPalet()
         self.createBoard()
         self.connectButtons()
@@ -432,6 +452,14 @@ class Ui_MainWindow(QWidget):
         #self.myThread.terminate()
         self.thread1.terminate()
 
+    # This method basically is called whenever the status of the comboBox is changed.
+    def comboBoxMethod(self, text):
+        if text=="Tree-view Mode (Local)":
+            self.frame.setVisible(False)
+            self.treeView.setVisible(True)
+        else:
+            self.frame.setVisible(True)
+            self.treeView.setVisible(False)
     def play(self):
         # Stores the checkpoints at which image needs to change in imageboard
         changeList = []
@@ -533,7 +561,7 @@ class Ui_MainWindow(QWidget):
         self.actionShare_FacebookImg.setText(_translate("MainWindow", "Share Image on Facebook"))
 
     def connectButtons(self):
-        # self.treeView.doubleClicked.connect(self.treeFileClicked)          # Action for double-clicking images
+        self.treeView.doubleClicked.connect(self.treeFileClicked)          # Action for double-clicking images
         self.actionQuit.triggered.connect(self.quitProgram)                  # Action for Quit
         self.playButton.clicked.connect(self.play)                           # Action for Play Button
         # self.playAudioButton.clicked.connect(self.playSound)               # Action for Play Audio Button
@@ -555,13 +583,14 @@ class Ui_MainWindow(QWidget):
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
-    # def createTreeView(self):
-    #     self.treeView = QtWidgets.QTreeView(self.centralwidget)
-    #     self.treeView.setGeometry(QtCore.QRect(20, 10, 441, 461))
-    #     self.treeView.setObjectName("treeView")
-    #     model = QFileSystemModel()
-    #     model.setRootPath('')
-    #     self.treeView.setModel(model)
+    def createTreeView(self):
+         self.treeView = QtWidgets.QTreeView(self.centralwidget)
+         self.treeView.setGeometry(QtCore.QRect(20, 10, 441, 461))
+         self.treeView.setObjectName("treeView")
+         model = QFileSystemModel()
+         model.setRootPath('')
+         self.treeView.setModel(model)
+
     def shareTwitterImage(self):
         print("The image was shared on Twitter. Yay!")
 
@@ -604,14 +633,15 @@ class Ui_MainWindow(QWidget):
         #audiolab.wavwrite(c, 'file3.wav', fs, enc)
 
     def createPalet(self):
-        frame = QtWidgets.QFrame(self.centralwidget)
-        frame.setObjectName("Palet")
-        frame.setStyleSheet('#Palet { border: 5px solid grey }')
-        frame.setGeometry(20, 10, 450, 461)
-        self.palet = QtWidgets.QGridLayout(frame)
+        self.frame = QtWidgets.QFrame(self.centralwidget)
+        self.frame.setObjectName("Palet")
+        self.frame.setStyleSheet('#Palet { border: 5px solid grey; border-color: #2a84e5}')
+        self.frame.setGeometry(20, 7, 450, 465)
+        self.palet = QtWidgets.QGridLayout(self.frame)
         self.palet.addWidget(QLineEdit(), 0, 0, 1, 2)
         self.palet.addWidget(QPushButton("Search"), 0, 2)
         self.palet.itemAt(1).widget().clicked.connect(self.searchImages)
+        self.frame.setVisible(False)
 
     def searchImages(self, query):
         self.searchedImages = []
@@ -687,7 +717,7 @@ class Ui_MainWindow(QWidget):
         # self.mask.setAlignment(Qt.AlignCenter)
 
         self.imageBoard = QLabel(self.centralwidget)
-        self.imageBoard.setStyleSheet('border: 5px solid grey')
+        self.imageBoard.setStyleSheet('border: 5px solid grey; border-color: #2a84e5')
         self.imageBoard.setGeometry(QtCore.QRect(480, 7, 531, 465))
         self.imageBoard.setObjectName('imageBoard')
         self.imageBoard.setVisible(1)
@@ -720,7 +750,7 @@ class Ui_MainWindow(QWidget):
     def createSlider(self):
         self.horizontalSlider = QtWidgets.QSlider(self.timeline)
         self.horizontalSlider.setCursor(Qt.SizeHorCursor)
-        self.horizontalSlider.setGeometry(QtCore.QRect(0, 0, 997, 40))
+        self.horizontalSlider.setGeometry(QtCore.QRect(0, 0, 994, 40))
         self.horizontalSlider.setOrientation(QtCore.Qt.Horizontal)
         self.horizontalSlider.setObjectName("horizontalSlider")
         self.horizontalSlider.setRange(0,60)
@@ -733,7 +763,11 @@ class Ui_MainWindow(QWidget):
     def createTimeline(self):
         self.timeline = QtWidgets.QFrame(self.centralwidget)
         self.timeline.setGeometry(QtCore.QRect(16, 512, 994, 130))
-        self.timeline.setStyleSheet("background-color: rgb(186, 186, 186)")
+        self.timeline.setStyleSheet("background-color: rgb(186, 186, 186); border-radius: 5; border: 2px solid blue; border-color: #694f92")
+        #self.timeline.setStyleSheet("border-width: 15px")
+        #self.timeline.setStyleSheet("border-radius: 15px")
+        #self.timeline.setStyleSheet("border-color: #2a3e6a")
+
         self.timeline.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.timeline.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.timeline.setObjectName("Timeline")
@@ -743,23 +777,11 @@ class Ui_MainWindow(QWidget):
     def createAudioTimeline(self):
         self.audiotimeline = QtWidgets.QFrame(self.centralwidget)
         self.audiotimeline.setGeometry(QtCore.QRect(16, 655, 994, 50))
-        self.audiotimeline.setStyleSheet("background-color: rgb(186, 186, 186)")
+        self.audiotimeline.setStyleSheet("background-color: rgb(186, 186, 186); border-radius: 5; border: 2px solid blue; border-color: #694f92")
         self.audiotimeline.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.audiotimeline.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.audiotimeline.setObjectName("audioTimeline")
 
-    # This is the slider located on the timeline.
-    # We use it to track the duration of images when they are being played.
-    def createSlider(self):
-        self.horizontalSlider = QtWidgets.QSlider(self.timeline)
-        self.horizontalSlider.setCursor(Qt.SizeHorCursor)
-        self.horizontalSlider.setGeometry(QtCore.QRect(0, 0, 997, 40))
-        self.horizontalSlider.setOrientation(QtCore.Qt.Horizontal)
-        self.horizontalSlider.setObjectName("horizontalSlider")
-        self.horizontalSlider.setRange(0,60)
-        self.animation = QPropertyAnimation(self.horizontalSlider)
-        self.animation.setStartValue(self.horizontalSlider.minimum())
-        # self.horizontalSlider.sliderMoved.connect(self.getValue)
 
     def playView(self, imgIndex):
         try:
@@ -938,7 +960,7 @@ class Ui_MainWindow(QWidget):
             imgProp = ((displayLength/60)*985)
             self.myAudio.setGeometry(QtCore.QRect(16.41*(startTime+1), 656, imgProp, 48))
             self.myAudio.setAlignment(Qt.AlignCenter)
-            self.myAudio.setStyleSheet('border: 2px solid red')
+            self.myAudio.setStyleSheet('border: 2px solid red; border-radius: 5')
             self.myAudio.setText(str(self.audioPath))
             self.myAudio.setVisible(1)
             self.prModel.timelineIsEmpty = 0
@@ -957,7 +979,7 @@ class Ui_MainWindow(QWidget):
             displayLength = endTime - startTime
             imgProp = ((displayLength/60)*985)
             self.myAudio = QLabel(self.centralwidget)
-            self.myAudio.setStyleSheet('border: 2px solid red')
+            self.myAudio.setStyleSheet('border: 2px solid red; border-radius: 5')
             self.myAudio.setGeometry(QtCore.QRect(16.41*(startTime+1), 656, imgProp, 48))
             self.myAudio.setText(str(self.audioPath))
             self.myAudio.setAlignment(Qt.AlignCenter)
