@@ -15,7 +15,7 @@ graphical user interface of the application. It is invoked by main.py.
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QTreeView, QFileSystemModel, QApplication, QLabel, QWidget, QPushButton, QLineEdit, QMessageBox, QInputDialog, QStyle, QFileDialog, QComboBox
-from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtGui import QPixmap, QColor, QImage, QPainter
 from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QThread
