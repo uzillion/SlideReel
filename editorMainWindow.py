@@ -116,58 +116,137 @@ class imageThread(QtCore.QObject):
 
     def __init__(self, parent=None, *args, **kw):
         QtCore.QObject.__init__(self)
+        self.parent = parent
         # self.myInit(*args, **kw)
 
-    def playSlides(me, self):
+    def playSlides(self):
         c=0
-        for remaining in range(0, self.duration+1, 1):
-            self.horizontalSlider.setValue(remaining)
+        for remaining in range(0, self.parent.duration+1, 1):
+            self.parent.horizontalSlider.setValue(remaining)
             print(remaining)
-            if remaining in self.prModel.durations or remaining == 0:
-                if remaining != 0 and remaining != self.duration and self.transition == 1:
+            if remaining in self.parent.prModel.durations or remaining == 0:
+                if remaining != 0 and remaining != self.parent.duration and self.parent.transition == 1:
                     for transition in range(255, -1, -5):
-                        temp = self.imageBoard.pixmap().toImage()
+                        temp = self.parent.imageBoard.pixmap().toImage()
                         p = QPainter()
                         p.begin(temp)
                         p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
                         p.fillRect(temp.rect(), QColor(0, 0, 0, transition))
                         p.end()
-                        self.imageBoard.setPixmap(QPixmap.fromImage(temp))
-                        self.imageBoard.repaint()
+                        self.parent.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        self.parent.imageBoard.repaint()
                         time.sleep(1/24)
 
-                    self.img = QPixmap(self.prModel.labelList[c])
-                    self.img = self.scaleImage(self.img)
+                    self.parent.img = QPixmap(self.parent.prModel.labelList[c])
+                    self.parent.img = self.parent.scaleImage(self.parent.img)
 
                     for transition in range(0, 256, 5):
-                        temp = self.img.toImage()
+                        temp = self.parent.img.toImage()
                         p = QPainter()
                         p.begin(temp)
                         p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
                         p.fillRect(temp.rect(), QColor(0, 0, 0, transition))
                         p.end()
-                        self.imageBoard.setPixmap(QPixmap.fromImage(temp))
-                        self.imageBoard.repaint()
+                        self.parent.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        self.parent.imageBoard.repaint()
                         time.sleep(1/24)
-                    # for transition in range(110, -1, -1):
-                    #     self.mask.raise_()
-                    #     maskStyle = "background-color: rgba(0, 0, 0, "+ str(transition/100) +")"
-                    #     self.mask.setStyleSheet(maskStyle)
-                    #     # print(self.mask.styleSheet())
-                    #     self.mask.repaint()
-                    #     time.sleep(1/30)
+
                 else:
-                    self.playView(c)
+                    self.parent.playView(c)
                 c += 1
-            self.horizontalSlider.repaint()
+            self.parent.horizontalSlider.repaint()
             time.sleep(1)
             print("This is a test from imageThread")
 
-        self.isPlaying = 0
-        self.horizontalSlider.setValue(0)
-        self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        self.playView(0)
-        self.playButton.setEnabled(True)
+        self.parent.isPlaying = 0
+        self.parent.horizontalSlider.setValue(0)
+        self.parent.playButton.setIcon(self.parent.style().standardIcon(QStyle.SP_MediaPlay))
+        self.parent.playView(0)
+        self.parent.playButton.setEnabled(True)
+
+class Video(QtCore.QObject):
+    def __init__(self, parent=None, *args, **kw):
+        QtCore.QObject.__init__(self)
+        self.parent = parent
+
+    def output(self):
+        fps, duration = 24, self.parent.duration
+        p = Popen(['ffmpeg', '-y', '-f', 'image2pipe', '-vcodec', 'mjpeg', '-r', '25', '-i', '-', '-vcodec', 'mpeg4', '-qscale', '5', '-r', '25', 'video.avi'], stdin=PIPE)
+
+        c=0
+        remaining = 0.00
+        # while remaining in range(0, self.parent.duration+1, 1/24):
+        while remaining <= self.parent.duration:
+            self.parent.horizontalSlider.setValue(remaining)
+            if remaining in self.parent.prModel.durations or remaining == 0:
+                if remaining != 0 and remaining != self.parent.duration and self.parent.transition == 1:
+                    for transition in range(255, -1, -5):
+                        temp = self.parent.imageBoard.pixmap().toImage()
+                        painter = QPainter()
+                        painter.begin(temp)
+                        painter.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+                        painter.fillRect(temp.rect(), QColor(0, 0, 0, transition))
+                        painter.end()
+                        self.parent.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        self.parent.imageBoard.repaint()
+                        img = self.parent.convertToImage(self.parent.imageBoard.pixmap())
+                        img.save(p.stdin, 'JPEG')
+                        time.sleep(0.04)
+
+                    self.parent.img = QPixmap(self.parent.prModel.labelList[c])
+                    self.parent.img = self.parent.scaleImage(self.parent.img)
+
+                    for transition in range(0, 256, 5):
+                        temp = self.parent.img.toImage()
+                        painter = QPainter()
+                        painter.begin(temp)
+                        painter.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+                        painter.fillRect(temp.rect(), QColor(0, 0, 0, transition))
+                        painter.end()
+                        self.parent.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        self.parent.imageBoard.repaint()
+                        img = self.parent.convertToImage(self.parent.imageBoard.pixmap())
+                        img.save(p.stdin, 'JPEG')
+                        time.sleep(0.04)
+
+                else:
+                    self.parent.playView(c)
+                    img = self.parent.convertToImage(self.parent.imageBoard.pixmap())
+                    img.save(p.stdin, 'JPEG')
+                c += 1
+            else:
+                img = self.parent.convertToImage(self.parent.imageBoard.pixmap())
+                img.save(p.stdin, 'JPEG')
+            self.parent.horizontalSlider.repaint()
+            remaining *= 100000.000
+            remaining = round(remaining)
+            print("remaining (*100000):{}".format(remaining))
+            remaining += 4000.000
+            print("remaining (+4000):{}".format(remaining))
+            temp = remaining%4.000
+            # print("remaining (before correction):{}".format(remaining))
+            print("temp:{}".format(temp))
+            remaining = remaining - temp
+            remaining /= 100000.000
+            print("remaining:{}".format(remaining))
+
+            time.sleep(0.04)
+            # print("This is a test from imageThread")
+
+        p.stdin.close()
+        p.wait()
+        self.parent.isPlaying = 0
+        self.parent.horizontalSlider.setValue(0)
+        self.parent.playButton.setIcon(self.parent.style().standardIcon(QStyle.SP_MediaPlay))
+        self.parent.playView(0)
+        self.parent.playButton.setEnabled(True)
+
+
+        # for i in range(fps * self.parent.duration):
+        #     img = self.parent.convertToImage(self.parent.imageBoard.pixmap())
+        #     img.save(p.stdin, 'JPEG')
+        # p.stdin.close()
+        # p.wait()
 
 
 def clickable(widget):      # Making QLabels clickable
@@ -204,15 +283,27 @@ class Ui_MainWindow(QWidget):
         return pil_im
 
     def writeToFrame(self):
-        self.play()
-        fps, duration = 24, self.duration
-        p = Popen(['ffmpeg', '-y', '-f', 'image2pipe', '-vcodec', 'mjpeg', '-r', '24', '-i', '-', '-vcodec', 'mpeg4', '-qscale', '5', '-r', '24', 'video.avi'], stdin=PIPE)
+        # self.myThread = QtCore.QThread()
+        # self.task = imageThread(self)
+        # self.task.moveToThread(self.myThread)
+        # self.myThread.started.connect(self.task.playSlides)
+        # self.myThread.start()
 
-        for i in range(fps * self.duration):
-            img = self.convertToImage(self.imageBoard.pixmap())
-            img.save(p.stdin, 'JPEG')
-        p.stdin.close()
-        p.wait()
+        self.vThread = QtCore.QThread()
+        duration = self.duration
+        self.vOutput = Video(self)
+        self.vOutput.moveToThread(self.vThread)
+        self.vThread.started.connect(self.vOutput.output)
+        self.vThread.start()
+        # print("From main, after imgThread")
+        # fps, duration = 24, self.duration
+        # p = Popen(['ffmpeg', '-y', '-f', 'image2pipe', '-vcodec', 'mjpeg', '-r', '24', '-i', '-', '-vcodec', 'mpeg4', '-qscale', '5', '-r', '24', 'video.avi'], stdin=PIPE)
+        #
+        # for i in range(fps * self.duration):
+        #     img = self.convertToImage(self.imageBoard.pixmap())
+        #     img.save(p.stdin, 'JPEG')
+        # p.stdin.close()
+        # p.wait()
 
 
     def setupUi(self, MainWindow):
@@ -462,6 +553,7 @@ class Ui_MainWindow(QWidget):
         else:
             self.frame.setVisible(True)
             self.treeView.setVisible(False)
+
     def play(self):
         # Stores the checkpoints at which image needs to change in imageboard
         changeList = []
