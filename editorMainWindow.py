@@ -31,6 +31,7 @@ import io
 from PyQt5.QtGui import QImage
 from PyQt5.QtCore import QBuffer
 from subprocess import Popen, PIPE
+# impor
 #import audiolab, scipy
 # import pygame
 #pip3 install pygame
@@ -116,53 +117,52 @@ class imageThread(QtCore.QObject):
 
     def __init__(self, parent=None, *args, **kw):
         QtCore.QObject.__init__(self)
-        self.parent = parent
         # self.myInit(*args, **kw)
 
-    def playSlides(self):
+    def playSlides(self, parent):
         c=0
-        for remaining in range(0, self.parent.duration+1, 1):
-            self.parent.horizontalSlider.setValue(remaining)
+        for remaining in range(0, parent.duration+1, 1):
+            parent.horizontalSlider.setValue(remaining)
             print(remaining)
-            if remaining in self.parent.prModel.durations or remaining == 0:
-                if remaining != 0 and remaining != self.parent.duration and self.parent.transition == 1:
+            if remaining in parent.prModel.durations or remaining == 0:
+                if remaining != 0 and remaining != parent.duration and parent.transition == 1:
                     for transition in range(255, -1, -5):
-                        temp = self.parent.imageBoard.pixmap().toImage()
+                        temp = parent.imageBoard.pixmap().toImage()
                         p = QPainter()
                         p.begin(temp)
                         p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
                         p.fillRect(temp.rect(), QColor(0, 0, 0, transition))
                         p.end()
-                        self.parent.imageBoard.setPixmap(QPixmap.fromImage(temp))
-                        self.parent.imageBoard.repaint()
+                        parent.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        parent.imageBoard.repaint()
                         time.sleep(1/24)
 
-                    self.parent.img = QPixmap(self.parent.prModel.labelList[c])
-                    self.parent.img = self.parent.scaleImage(self.parent.img)
+                    parent.img = QPixmap(parent.prModel.labelList[c])
+                    parent.img = parent.scaleImage(parent.img)
 
                     for transition in range(0, 256, 5):
-                        temp = self.parent.img.toImage()
+                        temp = parent.img.toImage()
                         p = QPainter()
                         p.begin(temp)
                         p.setCompositionMode(QPainter.CompositionMode_DestinationIn)
                         p.fillRect(temp.rect(), QColor(0, 0, 0, transition))
                         p.end()
-                        self.parent.imageBoard.setPixmap(QPixmap.fromImage(temp))
-                        self.parent.imageBoard.repaint()
+                        parent.imageBoard.setPixmap(QPixmap.fromImage(temp))
+                        parent.imageBoard.repaint()
                         time.sleep(1/24)
 
                 else:
-                    self.parent.playView(c)
+                    parent.playView(c)
                 c += 1
-            self.parent.horizontalSlider.repaint()
+            parent.horizontalSlider.repaint()
             time.sleep(1)
             print("This is a test from imageThread")
 
-        self.parent.isPlaying = 0
-        self.parent.horizontalSlider.setValue(0)
-        self.parent.playButton.setIcon(self.parent.style().standardIcon(QStyle.SP_MediaPlay))
-        self.parent.playView(0)
-        self.parent.playButton.setEnabled(True)
+        parent.isPlaying = 0
+        parent.horizontalSlider.setValue(0)
+        parent.playButton.setIcon(parent.style().standardIcon(QStyle.SP_MediaPlay))
+        parent.playView(0)
+        parent.playButton.setEnabled(True)
 
 class Video(QtCore.QObject):
     def __init__(self, parent=None, *args, **kw):
@@ -563,7 +563,7 @@ class Ui_MainWindow(QWidget):
         total = 0
         c = 0
         print("From main, before Handle")
-        # self.handleAudio()
+        self.handleAudio()
         print("From main, after Handle")
         # self.sound = QSoundEffect()
         # self.sound.setSource(QUrl.fromLocalFile("piano-melody.wav"))
@@ -715,6 +715,7 @@ class Ui_MainWindow(QWidget):
         self.actionShare_FacebookImg.triggered.connect(self.shareFacebookImage)
         self.actionShare_FacebookVid.triggered.connect(self.shareFacebookVideo)
         self.makeMovieButton.clicked.connect(self.writeToFrame)
+        self.actionCrop.triggered.connect(self.cropimg)
 
     # This is the tree-view, which is located on the left-hand side.
     # It is our main tool to browse folders and paths.
@@ -919,13 +920,13 @@ class Ui_MainWindow(QWidget):
 
 
     def playView(self, imgIndex):
-        try:
+        # try:
             self.img = QPixmap(self.prModel.labelList[imgIndex])
             self.img = self.scaleImage(self.img)
             self.imageBoard.setPixmap(self.img)
             self.imageBoard.setAlignment(Qt.AlignCenter)
-        except:
-            self.imageBoard.setStyleSheet("background-color: black;")
+        # except:
+            # self.imageBoard.setStyleSheet("background-color: black;")
 
     # This is the function that is executed when the user double-clicks on a filePath
     # via treeView. This function gets the path of the image file and changes the image accordingly.
@@ -1200,10 +1201,11 @@ class Ui_MainWindow(QWidget):
         for x in range(self.img.width()):
             for y in range(self.img.height()):
                 color = QColor(self.img.pixel(x, y))
-            r = self.truncate(factor * (color.red()-128) + 128)
-            g = self.truncate(factor * (color.green()-128) + 128)
-            b = self.truncate(factor * (color.blue()-128) + 128)
-            self.img.setPixelColor(x, y, QColor(r, g, b))
+                r = self.truncate(factor * (color.red()-128) + 128)
+                g = self.truncate(factor * (color.green()-128) + 128)
+                b = self.truncate(factor * (color.blue()-128) + 128)
+                self.img.setPixelColor(x, y, QColor(r, g, b))
+
         self.pixmap.convertFromImage(self.img)
         self.imageBoard.setPixmap(self.pixmap)
         self.imageBoard.setAlignment(Qt.AlignCenter)
