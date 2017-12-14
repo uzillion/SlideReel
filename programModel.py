@@ -39,3 +39,4 @@ class editorModel:
         self.audioTrackQueue = []       # A queue for audio paths to play in order
         self.imageStartTimes = []
         self.imageEndTimes = []
+        self.oneImageImported = 0  # To see if the user has imported at least one image
